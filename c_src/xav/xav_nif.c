@@ -101,10 +101,16 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     fprintf(stdout, "got reader\n");
 
     size_t data_size;
-
+    int eof = 0;
+    int frame_ready = 0;
     do {
         if (reader->offset == 0) {
             data_size = fread(reader->inbuf, 1, INBUF_SIZE, reader->f);
+            if (ferror(reader->f)) {
+                ERL_NIF_TERM reason = enif_make_atom(env, "read_error");
+                return enif_raise_exception(env, reason);
+            }
+            eof = !data_size;
             fprintf(stdout, "read: %d\n", data_size);
             reader->offset = 0;
         } else {
@@ -129,17 +135,31 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
             reader->offset = 0;
         }
 
-     } while(!reader->pkt->size);
+        if (reader->pkt->size) {
+            if (avcodec_send_packet(reader->c, reader->pkt) < 0){
+                ERL_NIF_TERM reason = enif_make_atom(env, "send_packet");
+                return enif_raise_exception(env, reason);
+            }
+
+            int ret = avcodec_receive_frame(reader->c, reader->frame);
+
+            if (ret == 0) {
+             frame_ready = 1;
+            } else if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+                continue; 
+            } else if (ret < 0) {
+                ERL_NIF_TERM reason = enif_make_atom(env, "receive_frame");
+                return enif_raise_exception(env, reason);     
+            }
+        }
+     } while(!eof && !frame_ready);
 
     printf("frame size: %d\n", reader->pkt->size);
     
-    // decode(reader);
-
     ERL_NIF_TERM ret_term;
-    unsigned char *ptr= enif_make_new_binary(env, reader->pkt->size, &ret_term);
-    memcpy(ptr, reader->pkt->data, reader->pkt->size);
+    unsigned char *ptr= enif_make_new_binary(env, reader->frame->linesize[0], &ret_term);
+    memcpy(ptr, reader->frame->data[0], reader->frame->linesize[0]);
     return ret_term;
-    // return enif_make_atom(env, "error");
 }
 
 static ErlNifFunc xav_funcs[] = {
