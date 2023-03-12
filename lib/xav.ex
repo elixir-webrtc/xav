@@ -3,16 +3,18 @@ defmodule Xav do
   Documentation for `Xav`.
   """
 
-  @doc """
-  Hello world.
+  @enforce_keys [:reader]
+  defstruct @enforce_keys
 
-  ## Examples
+  def new_reader(path) do
+    reader = Xav.NIF.new_reader(path)
 
-      iex> Xav.hello()
-      :world
+    %__MODULE__{
+      reader: reader
+    }
+  end
 
-  """
-  def hello do
-    :world
+  def next_frame(%__MODULE__{reader: reader}) do
+    Xav.NIF.next_frame(reader)
   end
 end

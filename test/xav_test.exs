@@ -2,7 +2,12 @@ defmodule XavTest do
   use ExUnit.Case
   doctest Xav
 
-  test "greets the world" do
-    assert Xav.hello() == :world
+  test "next_frame/1" do
+    "./out.h264"
+    |> Xav.new_reader()
+    |> Xav.next_frame()
+    |> IO.inspect()
+    |> byte_size()
+    |> IO.inspect()
   end
 end
