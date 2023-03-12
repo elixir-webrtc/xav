@@ -1,0 +1,15 @@
+# Env vars provided by elixir_make
+# see https://hexdocs.pm/elixir_make/Mix.Tasks.Compile.ElixirMake.html#module-default-environment-variables
+# ERTS_INCLUDE_DIR
+# MIX_APP_PATH
+
+XAV_DIR = c_src/xav
+PRIV_DIR = $(MIX_APP_PATH)/priv
+XAV_SO = $(PRIV_DIR)/libxav.so
+
+CFLAGS = -fPIC -I$(ERTS_INCLUDE_DIR) -shared
+LDFLAGS = -lavcodec
+
+$(XAV_SO): $(XAV_DIR)/xav_nif.c
+	mkdir -p $(PRIV_DIR)
+	$(CC) $(CFLAGS) $(XAV_DIR)/xav_nif.c -o $(XAV_SO) $(LDFLAGS)
