@@ -179,8 +179,9 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     av_image_alloc(dst_data, dst_linesize, reader->frame->width, reader->frame->height,
                    AV_PIX_FMT_RGB24, 1);
 
-    sws_scale(sws_ctx, reader->frame->data, reader->frame->linesize, 0, reader->frame->height,
-              dst_data, dst_linesize);
+    // is this (const uint8_t * const*) cast really correct?
+    sws_scale(sws_ctx, (const uint8_t *const *)reader->frame->data, reader->frame->linesize, 0,
+              reader->frame->height, dst_data, dst_linesize);
 
     // clock_t end = clock();
     // double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
