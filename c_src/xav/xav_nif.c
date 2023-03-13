@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define INBUF_SIZE (4096 + AV_INPUT_BUFFER_PADDING_SIZE)
 
@@ -138,6 +139,8 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
     if (reader->pkt->size) {
 
+      //   clock_t begin = clock();
+
       if (avcodec_send_packet(reader->c, reader->pkt) < 0) {
         ERL_NIF_TERM reason = enif_make_atom(env, "send_packet");
         return enif_raise_exception(env, reason);
@@ -153,6 +156,11 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
         ERL_NIF_TERM reason = enif_make_atom(env, "receive_frame");
         return enif_raise_exception(env, reason);
       }
+
+      //   clock_t end = clock();
+      //   double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+
+      //   fprintf(stdout, "time: %f\n", time_spent);
     }
   } while (!eof && !frame_ready);
 
@@ -160,6 +168,8 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   if (reader->frame->format != AV_PIX_FMT_RGB24) {
     uint8_t *dst_data[4];
     int dst_linesize[4];
+
+    // clock_t begin = clock();
 
     // don't change res, only pix fmt
     struct SwsContext *sws_ctx = sws_getContext(
@@ -171,6 +181,11 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
     sws_scale(sws_ctx, reader->frame->data, reader->frame->linesize, 0, reader->frame->height,
               dst_data, dst_linesize);
+
+    // clock_t end = clock();
+    // double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+
+    // fprintf(stdout, "time swscale: %f\n", time_spent);
 
     ERL_NIF_TERM ret_term;
     unsigned char *ptr =
@@ -186,7 +201,8 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   }
 }
 
-static ErlNifFunc xav_funcs[] = {{"new_reader", 1, new_reader}, {"next_frame", 1, next_frame}};
+static ErlNifFunc xav_funcs[] = {{"new_reader", 1, new_reader},
+                                 {"next_frame", 1, next_frame, ERL_NIF_DIRTY_JOB_CPU_BOUND}};
 
 static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {
   reader_resource_type =
