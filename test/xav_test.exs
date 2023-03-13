@@ -6,7 +6,6 @@ defmodule XavTest do
     "./out.h264"
     |> Xav.new_reader()
     |> Xav.next_frame()
-    |> IO.inspect(limit: :infinity)
     |> byte_size()
     |> IO.inspect()
   end

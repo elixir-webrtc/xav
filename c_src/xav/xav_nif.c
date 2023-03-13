@@ -3,6 +3,8 @@
 #include <string.h>
 #include <erl_nif.h>
 #include <libavcodec/avcodec.h>
+#include <libswscale/swscale.h>
+#include <libavutil/imgutils.h>
 
 #define INBUF_SIZE (4096 + AV_INPUT_BUFFER_PADDING_SIZE)
 
@@ -36,7 +38,7 @@ ERL_NIF_TERM new_reader(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     memcpy(reader->path, bin.data, bin.size);
     reader->path[bin.size] = '\0';
     
-    fprintf(stdout, "trying to open %s\n", reader->path);
+    // fprintf(stdout, "trying to open %s\n", reader->path);
 
     reader->f = fopen(reader->path, "rb");
     if (!reader->f) {
@@ -87,7 +89,7 @@ ERL_NIF_TERM new_reader(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 }
 
 ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-    fprintf(stdout, "reading next frame\n");
+    // fprintf(stdout, "reading next frame\n");
     if (argc != 1) {
         return enif_make_atom(env, "error");
     }
@@ -97,8 +99,6 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
         ERL_NIF_TERM reason = enif_make_atom(env, "couldnt_get_reader_resource");
         return enif_raise_exception(env, reason);
     }    
-
-    fprintf(stdout, "got reader\n");
 
     size_t data_size;
     int eof = 0;
@@ -111,14 +111,14 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
                 return enif_raise_exception(env, reason);
             }
             eof = !data_size;
-            fprintf(stdout, "read: %d\n", data_size);
+            // fprintf(stdout, "read: %d\n", data_size);
             reader->offset = 0;
         } else {
             data_size = INBUF_SIZE - reader->offset;
-            fprintf(stdout, "data_size %d\n", data_size);
+            // fprintf(stdout, "data_size %d\n", data_size);
         }
 
-        fprintf(stdout, "trying to parse: %d\n", data_size);
+        // fprintf(stdout, "trying to parse: %d\n", data_size);
 
         int ret = av_parser_parse2(reader->parser, reader->c, &reader->pkt->data, &reader->pkt->size,
             &reader->inbuf[reader->offset], data_size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
@@ -128,7 +128,7 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
             return enif_raise_exception(env, reason);
         }
 
-        fprintf(stdout, "parsed: %d\n", ret);
+        // fprintf(stdout, "parsed: %d\n", ret);
 
         reader->offset += ret;
         if (reader->offset == INBUF_SIZE) {
@@ -136,6 +136,7 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
         }
 
         if (reader->pkt->size) {
+
             if (avcodec_send_packet(reader->c, reader->pkt) < 0){
                 ERL_NIF_TERM reason = enif_make_atom(env, "send_packet");
                 return enif_raise_exception(env, reason);
@@ -144,7 +145,7 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
             int ret = avcodec_receive_frame(reader->c, reader->frame);
 
             if (ret == 0) {
-             frame_ready = 1;
+                frame_ready = 1;
             } else if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
                 continue; 
             } else if (ret < 0) {
@@ -154,12 +155,26 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
         }
      } while(!eof && !frame_ready);
 
-    printf("frame size: %d\n", reader->pkt->size);
+
+    // convert to rgb
+    if (reader->frame->format != AV_PIX_FMT_RGB24) {
+        uint8_t *dst_data[4];
+        int dst_linesize[4];
+        struct SwsContext *sws_ctx = sws_getContext(1920, 1080, reader->frame->format, 1920, 1080, AV_PIX_FMT_RGB24, SWS_BILINEAR, NULL, NULL, NULL);
+        av_image_alloc(dst_data, dst_linesize, 1920, 1080, AV_PIX_FMT_RGB24, 1);
+        sws_scale(sws_ctx, reader->frame->data, reader->frame->linesize, 0, 1080, dst_data, dst_linesize);
     
-    ERL_NIF_TERM ret_term;
-    unsigned char *ptr= enif_make_new_binary(env, reader->frame->linesize[0], &ret_term);
-    memcpy(ptr, reader->frame->data[0], reader->frame->linesize[0]);
-    return ret_term;
+        ERL_NIF_TERM ret_term;
+        unsigned char *ptr= enif_make_new_binary(env, dst_linesize[0] * 1080, &ret_term);
+        memcpy(ptr, dst_data[0], dst_linesize[0] * 1080);
+
+        return ret_term;
+    } else {
+        ERL_NIF_TERM ret_term;
+        unsigned char *ptr= enif_make_new_binary(env, reader->frame->linesize[0], &ret_term);
+        memcpy(ptr, reader->frame->data[0], reader->frame->linesize[0]);
+        return ret_term;
+    }
 }
 
 static ErlNifFunc xav_funcs[] = {

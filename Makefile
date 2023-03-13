@@ -8,8 +8,8 @@ PRIV_DIR = $(MIX_APP_PATH)/priv
 XAV_SO = $(PRIV_DIR)/libxav.so
 
 CFLAGS = -fPIC -I$(ERTS_INCLUDE_DIR) -shared
-LDFLAGS = -lavcodec
+LDFLAGS = -lavcodec -lswscale -lavutil
 
-$(XAV_SO): $(XAV_DIR)/xav_nif.c
+$(XAV_SO): $(XAV_DIR)/xav_nif.c $(XAV_DIR)/utils.c
 	mkdir -p $(PRIV_DIR)
-	$(CC) $(CFLAGS) $(XAV_DIR)/xav_nif.c -o $(XAV_SO) $(LDFLAGS)
+	$(CC) $(CFLAGS) $(XAV_DIR)/xav_nif.c $(XAV_DIR)/utils.c -o $(XAV_SO) $(LDFLAGS)
