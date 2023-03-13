@@ -9,6 +9,8 @@
 
 #define INBUF_SIZE (4096 + AV_INPUT_BUFFER_PADDING_SIZE)
 
+void convert_to_rgb(AVFrame *frame, uint8_t *dst_data[], int dst_linesize[]);
+
 struct Reader {
   char *path;
   FILE *f;
@@ -171,17 +173,7 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
     // clock_t begin = clock();
 
-    // don't change res, only pix fmt
-    struct SwsContext *sws_ctx = sws_getContext(
-        reader->frame->width, reader->frame->height, reader->frame->format, reader->frame->width,
-        reader->frame->height, AV_PIX_FMT_RGB24, SWS_BILINEAR, NULL, NULL, NULL);
-
-    av_image_alloc(dst_data, dst_linesize, reader->frame->width, reader->frame->height,
-                   AV_PIX_FMT_RGB24, 1);
-
-    // is this (const uint8_t * const*) cast really correct?
-    sws_scale(sws_ctx, (const uint8_t *const *)reader->frame->data, reader->frame->linesize, 0,
-              reader->frame->height, dst_data, dst_linesize);
+    convert_to_rgb(reader->frame, dst_data, dst_linesize);
 
     // clock_t end = clock();
     // double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
@@ -200,6 +192,19 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     memcpy(ptr, reader->frame->data[0], reader->frame->linesize[0]);
     return ret_term;
   }
+}
+
+void convert_to_rgb(AVFrame *src_frame, uint8_t *dst_data[], int dst_linesize[]) {
+  //     
+  struct SwsContext *sws_ctx =
+      sws_getContext(src_frame->width, src_frame->height, src_frame->format, src_frame->width,
+                     src_frame->height, AV_PIX_FMT_RGB24, SWS_BILINEAR, NULL, NULL, NULL);
+
+  av_image_alloc(dst_data, dst_linesize, src_frame->width, src_frame->height, AV_PIX_FMT_RGB24, 1);
+
+  // is this (const uint8_t * const*) cast really correct?
+  sws_scale(sws_ctx, (const uint8_t *const *)src_frame->data, src_frame->linesize, 0,
+            src_frame->height, dst_data, dst_linesize);
 }
 
 static ErlNifFunc xav_funcs[] = {{"new_reader", 1, new_reader},
