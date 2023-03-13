@@ -13,3 +13,8 @@ LDFLAGS = -lavcodec -lswscale -lavutil
 $(XAV_SO): $(XAV_DIR)/xav_nif.c $(XAV_DIR)/utils.c
 	mkdir -p $(PRIV_DIR)
 	$(CC) $(CFLAGS) $(XAV_DIR)/xav_nif.c $(XAV_DIR)/utils.c -o $(XAV_SO) $(LDFLAGS)
+
+format:
+	clang-format -i $(XAV_DIR)/*
+
+.PHONY: format
