@@ -160,17 +160,22 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   if (reader->frame->format != AV_PIX_FMT_RGB24) {
     uint8_t *dst_data[4];
     int dst_linesize[4];
-    struct SwsContext *sws_ctx = sws_getContext(1920, 1080, reader->frame->format, 1920, 1080,
-                                                AV_PIX_FMT_RGB24, SWS_BILINEAR, NULL, NULL, NULL);
 
-    av_image_alloc(dst_data, dst_linesize, 1920, 1080, AV_PIX_FMT_RGB24, 1);
+    // don't change res, only pix fmt
+    struct SwsContext *sws_ctx = sws_getContext(
+        reader->frame->width, reader->frame->height, reader->frame->format, reader->frame->width,
+        reader->frame->height, AV_PIX_FMT_RGB24, SWS_BILINEAR, NULL, NULL, NULL);
 
-    sws_scale(sws_ctx, reader->frame->data, reader->frame->linesize, 0, 1080, dst_data,
-              dst_linesize);
+    av_image_alloc(dst_data, dst_linesize, reader->frame->width, reader->frame->height,
+                   AV_PIX_FMT_RGB24, 1);
+
+    sws_scale(sws_ctx, reader->frame->data, reader->frame->linesize, 0, reader->frame->height,
+              dst_data, dst_linesize);
 
     ERL_NIF_TERM ret_term;
-    unsigned char *ptr = enif_make_new_binary(env, dst_linesize[0] * 1080, &ret_term);
-    memcpy(ptr, dst_data[0], dst_linesize[0] * 1080);
+    unsigned char *ptr =
+        enif_make_new_binary(env, dst_linesize[0] * reader->frame->height, &ret_term);
+    memcpy(ptr, dst_data[0], dst_linesize[0] * reader->frame->height);
 
     return ret_term;
   } else {
