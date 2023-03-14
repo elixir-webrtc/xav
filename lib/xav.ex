@@ -15,12 +15,7 @@ defmodule Xav do
   end
 
   def next_frame(%__MODULE__{reader: reader}) do
-    start = System.monotonic_time(:millisecond)
-    frame = Xav.NIF.next_frame(reader)
-
-    (System.monotonic_time(:millisecond) - start)
-    |> IO.inspect(label: :time_in_us)
-
-    frame
+    {data, width, height, pts} = Xav.NIF.next_frame(reader)
+    Xav.Frame.new(data, width, height, pts)
   end
 end

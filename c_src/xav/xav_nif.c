@@ -166,11 +166,12 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     }
   } while (!eof && !frame_ready);
 
+  uint8_t **frame_data;
+  int *frame_linesize;
   // convert to rgb
   if (reader->frame->format != AV_PIX_FMT_RGB24) {
     uint8_t *dst_data[4];
     int dst_linesize[4];
-
     // clock_t begin = clock();
 
     convert_to_rgb(reader->frame, dst_data, dst_linesize);
@@ -179,23 +180,26 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     // double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
 
     // fprintf(stdout, "time swscale: %f\n", time_spent);
-
-    ERL_NIF_TERM ret_term;
-    unsigned char *ptr =
-        enif_make_new_binary(env, dst_linesize[0] * reader->frame->height, &ret_term);
-    memcpy(ptr, dst_data[0], dst_linesize[0] * reader->frame->height);
-
-    return ret_term;
+    frame_data = dst_data;
+    frame_linesize = dst_linesize;
   } else {
-    ERL_NIF_TERM ret_term;
-    unsigned char *ptr = enif_make_new_binary(env, reader->frame->linesize[0], &ret_term);
-    memcpy(ptr, reader->frame->data[0], reader->frame->linesize[0]);
-    return ret_term;
+    frame_data = reader->frame->data;
+    frame_linesize = reader->frame->linesize;
   }
+
+  ERL_NIF_TERM data_term;
+  unsigned char *ptr =
+      enif_make_new_binary(env, frame_linesize[0] * reader->frame->height, &data_term);
+  memcpy(ptr, frame_data[0], frame_linesize[0] * reader->frame->height);
+
+  ERL_NIF_TERM height_term = enif_make_int(env, reader->frame->height);
+  ERL_NIF_TERM width_term = enif_make_int(env, reader->frame->width);
+  ERL_NIF_TERM pts_term = enif_make_int64(env, reader->frame->pts);
+  return enif_make_tuple(env, 4, data_term, width_term, height_term, pts_term);
 }
 
 void convert_to_rgb(AVFrame *src_frame, uint8_t *dst_data[], int dst_linesize[]) {
-  //     
+  //
   struct SwsContext *sws_ctx =
       sws_getContext(src_frame->width, src_frame->height, src_frame->format, src_frame->width,
                      src_frame->height, AV_PIX_FMT_RGB24, SWS_BILINEAR, NULL, NULL, NULL);
