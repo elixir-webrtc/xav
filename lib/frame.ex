@@ -26,4 +26,11 @@ defmodule Xav.Frame do
       pts: pts
     }
   end
+
+  @spec to_nx(t()) :: Nx.Tensor.t()
+  def to_nx(%__MODULE__{} = frame) do
+    frame.data
+    |> Nx.from_binary(:u8)
+    |> Nx.reshape({frame.height, frame.width, 3})
+  end
 end

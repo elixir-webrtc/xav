@@ -22,6 +22,7 @@ defmodule Xav.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:nx, "~> 0.5"},
       {:elixir_make, "~> 0.7", runtime: false}
     ]
   end

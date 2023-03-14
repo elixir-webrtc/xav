@@ -19,4 +19,14 @@ defmodule XavTest do
     # |> byte_size()
     # |> IO.inspect()
   end
+
+  test "Frame.to_nx/1" do
+    r =
+      "./out.h264"
+      |> Xav.new_reader()
+
+    Xav.next_frame(r)
+    |> Xav.Frame.to_nx()
+    |> IO.inspect()
+  end
 end
