@@ -1,6 +1,17 @@
 # Xav
 
-**TODO: Add description**
+TODO:
+* [ ] - one pkt can containe multiple frames
+* [ ] - pkt frame unref
+* [ ] - nif and ffmpeg code split up
+* [ ] - resource cleanup
+* [ ] - seeking
+* [ ] - tests
+* [ ] - README
+* [ ] - streams
+* [ ] - camera input 
+* [ ] - CI for linux
+* [ ] - CI for windows and mac
 
 ## Installation
 
