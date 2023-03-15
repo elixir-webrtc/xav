@@ -131,6 +131,24 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
       return xav_nif_raise(env, "send_packet");
     }
 
+    // it's unclear when av_packet_unref should
+    // be called - right after calling avcodec_send_packet
+    // or after receiving the last decoded frame using
+    // avcodec_receive_frame?
+    //
+    // according to docs for avcodec_send_packet
+    //
+    // Ownership of the packet remains with the caller, 
+    // and the decoder will not write to the packet. 
+    // The decoder may create a reference to the packet data
+    // (or copy it if the packet is not reference-counted). 
+    // Unlike with older APIs, the packet is always fully consumed.
+    // 
+    // so it sounds like we can call av_packet_unref
+    // right after avcodec_send_packet as packet is always 
+    // fully consumed
+    av_packet_unref(reader->pkt);
+
     XAV_LOG_DEBUG("Trying to receive frame");
 
     ret = avcodec_receive_frame(reader->c, reader->frame);
@@ -199,6 +217,8 @@ fin:
   ERL_NIF_TERM frame_term =
       xav_nif_frame_to_term(env, frame_data, frame_linesize, reader->frame->width,
                             reader->frame->height, reader->frame->pts);
+
+  av_frame_unref(reader->frame);
 
   return xav_nif_ok(env, frame_term);
 }

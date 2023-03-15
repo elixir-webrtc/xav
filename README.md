@@ -2,7 +2,7 @@
 
 TODO:
 * [x] - one pkt can containe multiple frames
-* [ ] - pkt frame unref
+* [x] - pkt frame unref
 * [ ] - nif and ffmpeg code split up
 * [ ] - resource cleanup
 * [ ] - seeking
