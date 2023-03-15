@@ -15,7 +15,12 @@ defmodule Xav do
   end
 
   def next_frame(%__MODULE__{reader: reader}) do
-    {data, width, height, pts} = Xav.NIF.next_frame(reader)
-    Xav.Frame.new(data, width, height, pts)
+    case Xav.NIF.next_frame(reader) do
+      {:ok, {data, width, height, pts}} ->
+        {:ok, Xav.Frame.new(data, width, height, pts)}
+
+      {:error, :eof} = err ->
+        err
+    end
   end
 end

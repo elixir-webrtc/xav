@@ -47,7 +47,7 @@ ERL_NIF_TERM new_reader(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   reader->frame = NULL;
   reader->pkt = NULL;
 
-  // fprintf(stdout, "trying to open %s\n", reader->path);
+  XAV_LOG_DEBUG("Trying to open %s", reader->path);
 
   if (avformat_open_input(&reader->fmt_ctx, reader->path, NULL, NULL) < 0) {
     return xav_nif_raise(env, "couldnt_open_avformat_input");
@@ -92,7 +92,6 @@ ERL_NIF_TERM new_reader(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 }
 
 ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  // fprintf(stdout, "reading next frame\n");
   if (argc != 1) {
     return xav_nif_raise(env, "invalid_arg_count");
   }
@@ -102,35 +101,82 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "couldnt_get_reader_resource");
   }
 
-  size_t data_size;
-  int eof = 0;
-  int frame_ready = 0;
+  XAV_LOG_DEBUG("Trying to receive frame");
 
-  while (!frame_ready && av_read_frame(reader->fmt_ctx, reader->pkt) >= 0) {
+  int ret = avcodec_receive_frame(reader->c, reader->frame);
+
+  if (ret == 0) {
+    XAV_LOG_DEBUG("Received frame");
+    goto fin;
+  } else if (ret == AVERROR_EOF) {
+    XAV_LOG_DEBUG("EOF");
+    return xav_nif_error(env, "eof");
+  } else if (ret != AVERROR(EAGAIN)) {
+    XAV_LOG_DEBUG("Error when trying to receive frame");
+    return xav_nif_raise(env, "receive_frame");
+  } else {
+    XAV_LOG_DEBUG("Need more data");
+  }
+
+  int frame_ready = 0;
+  while (!frame_ready && (ret = av_read_frame(reader->fmt_ctx, reader->pkt)) >= 0) {
 
     if (reader->pkt->stream_index != reader->stream_idx) {
       continue;
     }
 
+    XAV_LOG_DEBUG("Read packet from input. Sending to decoder");
+
     if (avcodec_send_packet(reader->c, reader->pkt) < 0) {
       return xav_nif_raise(env, "send_packet");
     }
 
-    int ret = avcodec_receive_frame(reader->c, reader->frame);
+    XAV_LOG_DEBUG("Trying to receive frame");
+
+    ret = avcodec_receive_frame(reader->c, reader->frame);
 
     if (ret == 0) {
+      XAV_LOG_DEBUG("Received frame");
       frame_ready = 1;
-    } else if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-      continue;
-    } else if (ret < 0) {
+    } else if (ret == AVERROR_EOF) {
+      XAV_LOG_DEBUG("EOF");
+      return xav_nif_error(env, "eof");
+    } else if (ret != AVERROR(EAGAIN)) {
+      XAV_LOG_DEBUG("Error when trying to receive frame");
       return xav_nif_raise(env, "receive_frame");
+    } else {
+      XAV_LOG_DEBUG("Need more data");
     }
   }
 
+  if (ret == AVERROR_EOF) {
+    XAV_LOG_DEBUG("EOF. Flushing decoder");
+
+    if (avcodec_send_packet(reader->c, NULL) < 0) {
+      return xav_nif_raise(env, "send_packet");
+    }
+
+    XAV_LOG_DEBUG("Trying to receive frame");
+    ret = avcodec_receive_frame(reader->c, reader->frame);
+
+    if (ret == AVERROR_EOF) {
+      XAV_LOG_DEBUG("EOF");
+      return xav_nif_error(env, "eof");
+    } else if (ret == AVERROR(EAGAIN)) {
+      XAV_LOG_DEBUG("Need more data");
+    } else if (ret < 0) {
+      return xav_nif_raise(env, "receive_frame");
+    } else {
+      XAV_LOG_DEBUG("Received frame");
+    }
+  }
+
+fin:
   uint8_t **frame_data;
   int *frame_linesize;
   // convert to rgb
   if (reader->frame->format != AV_PIX_FMT_RGB24) {
+    XAV_LOG_DEBUG("Converting to RGB");
     uint8_t *dst_data[4];
     int dst_linesize[4];
     // clock_t begin = clock();
@@ -148,19 +194,16 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     frame_linesize = reader->frame->linesize;
   }
 
-  ERL_NIF_TERM data_term;
-  unsigned char *ptr =
-      enif_make_new_binary(env, frame_linesize[0] * reader->frame->height, &data_term);
-  memcpy(ptr, frame_data[0], frame_linesize[0] * reader->frame->height);
+  XAV_LOG_DEBUG("Returning to Erlang");
 
-  ERL_NIF_TERM height_term = enif_make_int(env, reader->frame->height);
-  ERL_NIF_TERM width_term = enif_make_int(env, reader->frame->width);
-  ERL_NIF_TERM pts_term = enif_make_int64(env, reader->frame->pts);
-  return enif_make_tuple(env, 4, data_term, width_term, height_term, pts_term);
+  ERL_NIF_TERM frame_term =
+      xav_nif_frame_to_term(env, frame_data, frame_linesize, reader->frame->width,
+                            reader->frame->height, reader->frame->pts);
+
+  return xav_nif_ok(env, frame_term);
 }
 
 void convert_to_rgb(AVFrame *src_frame, uint8_t *dst_data[], int dst_linesize[]) {
-  //
   struct SwsContext *sws_ctx =
       sws_getContext(src_frame->width, src_frame->height, src_frame->format, src_frame->width,
                      src_frame->height, AV_PIX_FMT_RGB24, SWS_BILINEAR, NULL, NULL, NULL);

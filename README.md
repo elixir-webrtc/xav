@@ -1,7 +1,7 @@
 # Xav
 
 TODO:
-* [ ] - one pkt can containe multiple frames
+* [x] - one pkt can containe multiple frames
 * [ ] - pkt frame unref
 * [ ] - nif and ffmpeg code split up
 * [ ] - resource cleanup
@@ -12,6 +12,8 @@ TODO:
 * [ ] - camera input 
 * [ ] - CI for linux
 * [ ] - CI for windows and mac
+* [x] - C debug logs
+* [x] - handle EOF 
 
 ## Installation
 

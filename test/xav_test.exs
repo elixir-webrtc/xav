@@ -31,19 +31,27 @@ defmodule XavTest do
       "./sample_h264.h264"
       |> Xav.new_reader()
 
-    Xav.next_frame(r)
-    |> Xav.Frame.to_nx()
+    {:ok, frame} = Xav.next_frame(r)
+
+    Xav.Frame.to_nx(frame)
     |> IO.inspect()
   end
 
-  @tag :debug
   test "mp4" do
     r =
       "./sample_mp4.mp4"
       |> Xav.new_reader()
 
-    Xav.next_frame(r)
-    |> Xav.Frame.to_nx()
+    {:ok, frame} = Xav.next_frame(r)
+
+    Xav.Frame.to_nx(frame)
     |> IO.inspect()
+  end
+
+  @tag :debug
+  test "eof" do
+    r = Xav.new_reader("./one_frame.mp4")
+    {:ok, _frame} = Xav.next_frame(r)
+    {:error, :eof} = Xav.next_frame(r)
   end
 end
