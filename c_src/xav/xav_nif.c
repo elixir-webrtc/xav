@@ -88,7 +88,9 @@ ERL_NIF_TERM new_reader(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "couldnt_open_codec");
   }
 
-  return enif_make_resource(env, reader);
+  ERL_NIF_TERM ret_term = enif_make_resource(env, reader);
+  enif_release_resource(reader);
+  return ret_term;
 }
 
 ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
@@ -138,14 +140,14 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     //
     // according to docs for avcodec_send_packet
     //
-    // Ownership of the packet remains with the caller, 
-    // and the decoder will not write to the packet. 
+    // Ownership of the packet remains with the caller,
+    // and the decoder will not write to the packet.
     // The decoder may create a reference to the packet data
-    // (or copy it if the packet is not reference-counted). 
+    // (or copy it if the packet is not reference-counted).
     // Unlike with older APIs, the packet is always fully consumed.
-    // 
+    //
     // so it sounds like we can call av_packet_unref
-    // right after avcodec_send_packet as packet is always 
+    // right after avcodec_send_packet as packet is always
     // fully consumed
     av_packet_unref(reader->pkt);
 
@@ -238,9 +240,18 @@ void convert_to_rgb(AVFrame *src_frame, uint8_t *dst_data[], int dst_linesize[])
 static ErlNifFunc xav_funcs[] = {{"new_reader", 1, new_reader},
                                  {"next_frame", 1, next_frame, ERL_NIF_DIRTY_JOB_CPU_BOUND}};
 
+void free_reader(ErlNifEnv *env, void *obj) {
+  XAV_LOG_DEBUG("Freeing Reader object");
+  struct Reader *reader = (struct Reader *)obj;
+  avcodec_free_context(&reader->c);
+  av_packet_free(&reader->pkt);
+  av_frame_free(&reader->frame);
+  avformat_close_input(&reader->fmt_ctx);
+}
+
 static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {
   reader_resource_type =
-      enif_open_resource_type(env, NULL, "Reader", NULL, ERL_NIF_RT_CREATE, NULL);
+      enif_open_resource_type(env, NULL, "Reader", free_reader, ERL_NIF_RT_CREATE, NULL);
   return 0;
 }
 

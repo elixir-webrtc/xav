@@ -4,7 +4,7 @@ TODO:
 * [x] - one pkt can containe multiple frames
 * [x] - pkt frame unref
 * [ ] - nif and ffmpeg code split up
-* [ ] - resource cleanup
+* [x] - resource cleanup
 * [ ] - seeking
 * [ ] - tests
 * [ ] - README
@@ -14,6 +14,7 @@ TODO:
 * [ ] - CI for windows and mac
 * [x] - C debug logs
 * [x] - handle EOF 
+* [ ] - handle ffmpeg binaries
 
 ## Installation
 

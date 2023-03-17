@@ -8,7 +8,7 @@ PRIV_DIR = $(MIX_APP_PATH)/priv
 XAV_SO = $(PRIV_DIR)/libxav.so
 
 # uncomment to compile with debug logs
-# XAV_DEBUG_LOGS = -DXAV_DEBUG=1
+XAV_DEBUG_LOGS = -DXAV_DEBUG=1
 
 CFLAGS = -fPIC -I$(ERTS_INCLUDE_DIR) -I${XAV_DIR} -shared $(XAV_DEBUG_LOGS)
 LDFLAGS = -lavcodec -lswscale -lavutil -lavformat
