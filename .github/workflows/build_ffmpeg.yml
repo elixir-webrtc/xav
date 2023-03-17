@@ -1,0 +1,28 @@
+name: Build FFmpeg
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build_ffmpeg:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      
+      - name: set tag env
+        run: echo "TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
+      - name: install prerequisities
+        run: sudo apt install yasm
+
+      - name: build ffmpeg
+        # run: ./scripts/mock_build_ffmpeg.sh $(cat ffmpeg-version)
+        run: ./scripts/build_ffmpeg.sh $(cat ffmpeg-version)
+
+      - name: create release
+        run: hub release create -a ./ffmpeg/ffmpeg_$(cat ffmpeg-version)-x86_64-linux.tar.gz -m "$TAG" $TAG
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
