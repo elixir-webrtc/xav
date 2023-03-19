@@ -70,10 +70,11 @@ defmodule Xav.MixProject do
   end
 
   defp download_ffmpeg(arch, system) do
+    ffmpeg_version = File.read!("ffmpeg-version") |> String.trim()
     Mix.shell().info("Downloading precompiled ffmpeg for #{arch}-#{system}")
     Mix.shell().info("Unpacking precompiled ffmpeg")
 
-    ffmpeg_archive_path = Path.join(__DIR__, "ffmpeg_5.0.1-#{arch}-#{system}.tar.gz")
+    ffmpeg_archive_path = Path.join(__DIR__, "ffmpeg_#{ffmpeg_version}-#{arch}-#{system}.tar.gz")
 
     case :erl_tar.extract(ffmpeg_archive_path, [:compressed]) do
       :ok ->
