@@ -7,11 +7,19 @@ XAV_DIR = c_src/xav
 PRIV_DIR = $(MIX_APP_PATH)/priv
 XAV_SO = $(PRIV_DIR)/libxav.so
 
+FFMPEG_INCLUDE_DIR = ffmpeg_build/include
+FFMPEG_LIB_DIR = ffmpeg_build/lib
+
 # uncomment to compile with debug logs
 XAV_DEBUG_LOGS = -DXAV_DEBUG=1
 
+ifeq ($(USE_BUNDLED_FFMPEG), true)
+CFLAGS = -fPIC -I$(ERTS_INCLUDE_DIR) -I${FFMPEG_INCLUDE_DIR} -I${XAV_DIR} -shared $(XAV_DEBUG_LOGS)
+LDFLAGS = -L$(FFMPEG_LIB_DIR) -lavcodec -lswscale -lavutil -lavformat
+else
 CFLAGS = -fPIC -I$(ERTS_INCLUDE_DIR) -I${XAV_DIR} -shared $(XAV_DEBUG_LOGS)
 LDFLAGS = -lavcodec -lswscale -lavutil -lavformat
+endif
 
 $(XAV_SO): Makefile $(XAV_DIR)/xav_nif.c $(XAV_DIR)/utils.h $(XAV_DIR)/utils.c
 	mkdir -p $(PRIV_DIR)

@@ -26,3 +26,4 @@ xav-*.tar
 /tmp/
 
 .vscode/
+ffmpeg_build/
