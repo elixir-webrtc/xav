@@ -7,8 +7,8 @@ XAV_DIR = c_src/xav
 PRIV_DIR = $(MIX_APP_PATH)/priv
 XAV_SO = $(PRIV_DIR)/libxav.so
 
-FFMPEG_INCLUDE_DIR = ffmpeg_build/include
-FFMPEG_LIB_DIR = ffmpeg_build/lib
+FFMPEG_INCLUDE_DIR = ./ffmpeg_build/include
+FFMPEG_LIB_DIR = ./ffmpeg_build/lib
 
 # uncomment to compile with debug logs
 XAV_DEBUG_LOGS = -DXAV_DEBUG=1

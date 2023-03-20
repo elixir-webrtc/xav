@@ -40,7 +40,7 @@ Kino.Image.new(tensor)
 * [x] - README
 * [ ] - streams
 * [ ] - camera input 
-* [ ] - CI for linux
+* [x] - CI for linux
 * [ ] - CI for windows and mac
 * [x] - C debug logs
 * [x] - handle EOF 
