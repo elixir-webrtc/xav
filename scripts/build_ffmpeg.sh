@@ -33,12 +33,6 @@ make install
 
 echo -e "CREATING TARBALL\n"
 
-tar -cvzhf ffmpeg_$FFMPEG_VERSION-x86_64-linux.tar.gz \
+tar -cvzf ffmpeg_$FFMPEG_VERSION-x86_64-linux.tar.gz \
 ffmpeg_build/include \
-ffmpeg_build/lib/libavcodec.so \
-ffmpeg_build/lib/libavdevice.so \
-ffmpeg_build/lib/libavfilter.so \
-ffmpeg_build/lib/libavformat.so \
-ffmpeg_build/lib/libavutil.so \
-ffmpeg_build/lib/libswresample.so \
-ffmpeg_build/lib/libswscale.so
+ffmpeg_build/lib/
