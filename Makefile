@@ -21,9 +21,9 @@ CFLAGS = -fPIC -I$(ERTS_INCLUDE_DIR) -I${XAV_DIR} -shared $(XAV_DEBUG_LOGS)
 LDFLAGS = -lavcodec -lswscale -lavutil -lavformat
 endif
 
-$(XAV_SO): Makefile $(XAV_DIR)/xav_nif.c $(XAV_DIR)/utils.h $(XAV_DIR)/utils.c
+$(XAV_SO): Makefile $(XAV_DIR)/xav_nif.c $(XAV_DIR)/reader.h $(XAV_DIR)/reader.c $(XAV_DIR)/utils.h $(XAV_DIR)/utils.c
 	mkdir -p $(PRIV_DIR)
-	$(CC) $(CFLAGS) $(XAV_DIR)/xav_nif.c $(XAV_DIR)/utils.c -o $(XAV_SO) $(LDFLAGS)
+	$(CC) $(CFLAGS) $(XAV_DIR)/xav_nif.c $(XAV_DIR)/reader.c $(XAV_DIR)/utils.c -o $(XAV_SO) $(LDFLAGS)
 
 format:
 	clang-format -i $(XAV_DIR)/*

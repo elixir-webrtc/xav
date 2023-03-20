@@ -3,7 +3,7 @@
 TODO:
 * [x] - one pkt can containe multiple frames
 * [x] - pkt frame unref
-* [ ] - nif and ffmpeg code split up
+* [x] - nif and ffmpeg code split up
 * [x] - resource cleanup
 * [ ] - seeking
 * [ ] - tests
@@ -15,6 +15,7 @@ TODO:
 * [x] - C debug logs
 * [x] - handle EOF 
 * [ ] - handle ffmpeg binaries
+* [ ] - audio support
 
 ## Installation
 

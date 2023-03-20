@@ -8,6 +8,9 @@
 #define XAV_LOG_DEBUG(...)
 #endif
 
+#define XAV_ALLOC(X) enif_alloc(X)
+#define XAV_FREE(X) enif_free(X)
+
 void print_supported_pix_fmts(AVCodec *codec);
 
 ERL_NIF_TERM xav_nif_ok(ErlNifEnv *env, ERL_NIF_TERM data_term);
