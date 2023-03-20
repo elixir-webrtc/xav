@@ -1,26 +1,8 @@
 # Xav
 
-TODO:
-* [x] - one pkt can containe multiple frames
-* [x] - pkt frame unref
-* [x] - nif and ffmpeg code split up
-* [x] - resource cleanup
-* [ ] - seeking
-* [ ] - tests
-* [ ] - README
-* [ ] - streams
-* [ ] - camera input 
-* [ ] - CI for linux
-* [ ] - CI for windows and mac
-* [x] - C debug logs
-* [x] - handle EOF 
-* [ ] - handle ffmpeg binaries
-* [ ] - audio support
+Elixir wrapper over FFmpeg for reading audio and video files.
 
 ## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `xav` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
@@ -30,7 +12,44 @@ def deps do
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/xav>.
+### macOS, Windows and ARM
 
+Currently, Xav ships with precompiled ffmpeg binaries only for x86_64-linux platform.
+On other platforms, you have to install ffmpeg on your own and make sure that
+paths to ffmpeg header files and ffmpeg shared libraries are searchable by 
+C compiler and linker. In case of linux, you have to set properly `C_INCLUDE_PATH`
+and `LIBRARY_PATH`.
+
+## Usage
+
+```elixir
+r = Xav.new_reader("./some_mp4_file.mp4")
+{:ok, %Xav.Frame{} = frame} = Xav.next_frame(r)
+tensor = Xav.Frame.to_nx(frame)
+Kino.Image.new(tensor)
+```
+
+## TODO
+
+* [x] - one pkt can containe multiple frames
+* [x] - pkt frame unref
+* [x] - nif and ffmpeg code split up
+* [x] - resource cleanup
+* [ ] - seeking
+* [ ] - tests
+* [x] - README
+* [ ] - streams
+* [ ] - camera input 
+* [ ] - CI for linux
+* [ ] - CI for windows and mac
+* [x] - C debug logs
+* [x] - handle EOF 
+* [ ] - handle ffmpeg binaries
+* [ ] - audio support
+* [ ] - examples
+
+## LICENSE
+
+Copyright 2023, Michał Śledź
+
+Licensed under the [MIT](./LICENSE)
