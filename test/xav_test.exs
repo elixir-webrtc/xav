@@ -21,7 +21,7 @@ defmodule XavTest do
     Xav.next_frame(r)
 
     Xav.next_frame(r)
-    |> IO.inspect()
+    # |> IO.inspect()
 
     # |> byte_size()
   end
@@ -34,7 +34,7 @@ defmodule XavTest do
     {:ok, frame} = Xav.next_frame(r)
 
     Xav.Frame.to_nx(frame)
-    |> IO.inspect()
+    # |> IO.inspect()
   end
 
   test "mp4" do
@@ -45,7 +45,7 @@ defmodule XavTest do
     {:ok, frame} = Xav.next_frame(r)
 
     Xav.Frame.to_nx(frame)
-    |> IO.inspect()
+    # |> IO.inspect()
   end
 
   test "eof" do

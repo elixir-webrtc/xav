@@ -8,9 +8,15 @@ Xav requires development packages of FFmpeg to be installed on your system.
 
 ### Fedora
 
-```
+```bash
 dnf install ffmpeg-devel ffmpeg-libs
 export C_INCLUDE_PATH=$C_INCLUDE_PATH:/usr/include/ffmpeg
+```
+
+### Ubuntu
+
+```bash
+apt install libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
 ```
 
 And include Xav in your list of dependencies:

@@ -1,4 +1,6 @@
 defmodule Xav.NIF do
+  @moduledoc false
+
   @on_load :__on_load__
 
   def __on_load__ do
