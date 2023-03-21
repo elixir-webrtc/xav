@@ -3,7 +3,7 @@ defmodule Xav.MixProject do
 
   # https://github.com/mickel8/releases/download/0.1.0/ffmpeg_5.0.1-x86_64-linux.tar.gz
 
-  @precompiled_ffmpeg_platforms [{"x86_64", "linux"}]
+  @precompiled_ffmpeg_platforms []
 
   def project do
     [
@@ -61,10 +61,10 @@ defmodule Xav.MixProject do
       download_ffmpeg(arch, system)
     else
       Mix.shell().info("""
-      Xav doesn't provide precompiled ffmpeg for your platform: #{arch}-#{system}. \
-      Make sure you have ffmpeg installed on your system and paths to ffmpeg header \
-      and library files are in C_INCLUDE_PATH and LIBRARY_PATH respectively. \
-      For more information refer to Xav README under: https://github.com/mickel8/xav/blob/main/README.md \
+      Xav requires FFmpeg development packages to be installed on your system. \
+      Make sure paths to ffmpeg header and library files are in C_INCLUDE_PATH, \
+      LIBRARY_PATH and LD_LIBRARY_PATH. For more information refer to Xav README \
+      under: https://github.com/mickel8/xav#installation \
       """)
     end
 
@@ -75,6 +75,7 @@ defmodule Xav.MixProject do
   defp download_ffmpeg(arch, system) do
     ffmpeg_version = File.read!("ffmpeg-version") |> String.trim()
     Mix.shell().info("Downloading precompiled ffmpeg for #{arch}-#{system}")
+    # TODO
     Mix.shell().info("Unpacking precompiled ffmpeg")
 
     ffmpeg_archive_path = Path.join(__DIR__, "ffmpeg_#{ffmpeg_version}-#{arch}-#{system}.tar.gz")
