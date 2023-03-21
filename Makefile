@@ -15,7 +15,7 @@ XAV_DEBUG_LOGS = -DXAV_DEBUG=1
 
 ifeq ($(USE_BUNDLED_FFMPEG), true)
 CFLAGS = -fPIC -I$(ERTS_INCLUDE_DIR) -I${FFMPEG_INCLUDE_DIR} -I${XAV_DIR} -shared $(XAV_DEBUG_LOGS)
-LDFLAGS = -L$(FFMPEG_LIB_DIR) -lavcodec -lswscale -lavutil -lavformat -Wl,-rpath=$(FFMPEG_LIB_DIR) 
+LDFLAGS = -L$(FFMPEG_LIB_DIR) -Wl,--whole-archive -lavcodec -lswscale -lavutil -lavformat -Wl,--no-whole-archive 
 else
 CFLAGS = -fPIC -I$(ERTS_INCLUDE_DIR) -I${XAV_DIR} -shared $(XAV_DEBUG_LOGS)
 LDFLAGS = -lavcodec -lswscale -lavutil -lavformat
