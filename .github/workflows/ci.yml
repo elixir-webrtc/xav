@@ -21,9 +21,9 @@ jobs:
       - run: mix format --check-formatted
       - run: mix docs 2>&1 | (! grep -q "warning:")
 
-  test:
+  test-linux:
     runs-on: ubuntu-latest
-    name: test OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+    name: test-linux-x86-64 OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
     strategy:
       matrix:
         otp: ['25']
@@ -37,5 +37,32 @@ jobs:
           otp-version: ${{matrix.otp}}
           elixir-version: ${{matrix.elixir}}
       - run: sudo apt install libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
+      - run: mix deps.get
+      - run: mix test
+
+  test-windows:
+    runs-on: windows-2019
+    name: test-windows-x86-64 OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+    strategy:
+      matrix:
+        otp: ['25']
+        elixir: ['1.14']
+    env:
+      MIX_ENV: test
+    steps:
+      - uses: actions/checkout@v2
+      - run: Get-Location
+      - run: Invoke-WebRequest https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip -OutFile ".\ffmpeg"
+      - run: Expand-Archive ".\ffmpeg" -DestinationPath ".\ffmpeg_build"
+      - run: $Env:INCLUDE = "ffmpeg_build\include"
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{matrix.otp}}
+          elixir-version: ${{matrix.elixir}}
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          toolset: 14.2
+          vsversion: 2019
+          arch: x64
       - run: mix deps.get
       - run: mix test
