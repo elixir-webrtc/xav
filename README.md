@@ -52,7 +52,7 @@ Kino.Image.new(tensor)
 * [x] - nif and ffmpeg code split up
 * [x] - resource cleanup
 * [ ] - seeking
-* [ ] - tests
+* [x] - tests
 * [x] - README
 * [ ] - streams
 * [ ] - camera input 
