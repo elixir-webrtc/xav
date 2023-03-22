@@ -1,26 +1,20 @@
 defmodule Xav do
   @moduledoc """
-  Documentation for `Xav`.
+  Main module for interacting with `Xav`.
+
+  `Xav` is an Elixir wrapper over FFmpeg intended for
+  reading file and network based media streams.
+
+  It doesn't map FFmpeg functions one to one but rather
+  wraps them in bigger building blocks creating a litte
+  higher abstraction level.
   """
 
-  @enforce_keys [:reader]
-  defstruct @enforce_keys
+  defdelegate new_reader!(path), to: Xav.Reader, as: :new!
 
-  def new_reader(path) do
-    reader = Xav.NIF.new_reader(path)
+  defdelegate new_reader(path), to: Xav.Reader, as: :new
 
-    %__MODULE__{
-      reader: reader
-    }
-  end
+  defdelegate next_frame(reader), to: Xav.Reader
 
-  def next_frame(%__MODULE__{reader: reader}) do
-    case Xav.NIF.next_frame(reader) do
-      {:ok, {data, width, height, pts}} ->
-        {:ok, Xav.Frame.new(data, width, height, pts)}
-
-      {:error, :eof} = err ->
-        err
-    end
-  end
+  defdelegate to_nx(frame), to: Xav.Frame
 end

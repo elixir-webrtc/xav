@@ -18,14 +18,14 @@ ERL_NIF_TERM new_reader(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   int ret = reader_init(reader, bin.data, bin.size);
 
   if (ret == -1) {
-    return xav_nif_raise(env, "couldnt_open_avformat_input");
+    return xav_nif_error(env, "couldnt_open_avformat_input");
   } else if (ret == -2) {
     return xav_nif_raise(env, "couldnt_create_new_reader");
   }
 
-  ERL_NIF_TERM ret_term = enif_make_resource(env, reader);
+  ERL_NIF_TERM reader_term = enif_make_resource(env, reader);
   enif_release_resource(reader);
-  return ret_term;
+  return xav_nif_ok(env, reader_term);
 }
 
 ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {

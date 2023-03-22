@@ -2,9 +2,12 @@
 
 Elixir wrapper over FFmpeg for reading audio and video files.
 
+See an interview with FFmpeg enthusiast:  https://youtu.be/9kaIXkImCAM
+
 ## Installation
 
 Xav requires development packages of FFmpeg to be installed on your system.
+
 
 ### Fedora
 
@@ -18,6 +21,10 @@ export C_INCLUDE_PATH=$C_INCLUDE_PATH:/usr/include/ffmpeg
 ```bash
 apt install libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
 ```
+
+### Windows
+
+Windows is not supported but PRs are welcomed.
 
 And include Xav in your list of dependencies:
 

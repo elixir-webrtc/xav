@@ -1,6 +1,6 @@
 defmodule Xav.Frame do
   @moduledoc """
-  Module representing video frame.
+  Video frame.
   """
 
   @type t() :: %__MODULE__{
@@ -27,6 +27,11 @@ defmodule Xav.Frame do
     }
   end
 
+  @doc """
+  Converts video frame to Nx tensor.
+
+  Such tensor can be easily displayed in livebook using [Kino](https://hexdocs.pm/kino/Kino.html)
+  """
   @spec to_nx(t()) :: Nx.Tensor.t()
   def to_nx(%__MODULE__{} = frame) do
     frame.data
