@@ -4,7 +4,7 @@ ErlNifResourceType *reader_resource_type;
 
 ERL_NIF_TERM new_reader(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
-  if (argc != 1) {
+  if (argc != 2) {
     return xav_nif_raise(env, "invalid_arg_count");
   }
 
@@ -13,9 +13,14 @@ ERL_NIF_TERM new_reader(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "invalid_path");
   }
 
+  int device_flag;
+  if (!enif_get_int(env, argv[1], &device_flag)){
+    return xav_nif_raise(env, "invalid_device_flag");
+  }
+
   struct Reader *reader = enif_alloc_resource(reader_resource_type, sizeof(struct Reader));
 
-  int ret = reader_init(reader, bin.data, bin.size);
+  int ret = reader_init(reader, bin.data, bin.size, device_flag);
 
   if (ret == -1) {
     return xav_nif_error(env, "couldnt_open_avformat_input");
@@ -62,7 +67,7 @@ void free_reader(ErlNifEnv *env, void *obj) {
   reader_free(reader);
 }
 
-static ErlNifFunc xav_funcs[] = {{"new_reader", 1, new_reader},
+static ErlNifFunc xav_funcs[] = {{"new_reader", 2, new_reader},
                                  {"next_frame", 1, next_frame, ERL_NIF_DIRTY_JOB_CPU_BOUND}};
 
 static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {

@@ -10,9 +10,9 @@ defmodule Xav do
   higher abstraction level.
   """
 
-  defdelegate new_reader!(path), to: Xav.Reader, as: :new!
+  defdelegate new_reader!(path, device? \\ false), to: Xav.Reader, as: :new!
 
-  defdelegate new_reader(path), to: Xav.Reader, as: :new
+  defdelegate new_reader(path, device? \\ false), to: Xav.Reader, as: :new
 
   defdelegate next_frame(reader), to: Xav.Reader
 

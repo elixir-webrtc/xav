@@ -8,7 +8,7 @@ defmodule Xav.NIF do
     :ok = :erlang.load_nif(path, 0)
   end
 
-  def new_reader(_path), do: :erlang.nif_error(:undef)
+  def new_reader(_path, _device), do: :erlang.nif_error(:undef)
 
   def next_frame(_reader), do: :erlang.nif_error(:undef)
 end

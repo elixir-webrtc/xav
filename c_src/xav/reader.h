@@ -2,6 +2,7 @@
 #include <libavformat/avformat.h>
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
+#include <libavdevice/avdevice.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,6 +18,8 @@ struct Reader {
   AVCodecContext *c;
   AVFormatContext *fmt_ctx;
   int stream_idx;
+  const AVInputFormat *input_format;
+  AVDictionary *options;
 
   // used for converting decoded frame
   // to rgb pixel format
@@ -31,7 +34,7 @@ struct Reader {
   int *frame_linesize;
 };
 
-int reader_init(struct Reader *reader, char *path, size_t path_size);
+int reader_init(struct Reader *reader, char *path, size_t path_size, int device_flag);
 
 int reader_next_frame(struct Reader *reader);
 

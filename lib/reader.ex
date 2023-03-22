@@ -11,10 +11,10 @@ defmodule Xav.Reader do
   @doc """
   The same as new/1 but raises on error.
   """
-  @spec new!(String.t()) :: t()
-  def new!(path) do
-    case new(path) do
-      {:ok, _reader} = ret -> ret
+  @spec new!(String.t(), boolean()) :: t()
+  def new!(path, device? \\ false) do
+    case new(path, device?) do
+      {:ok, reader} -> reader
       {:error, reason} -> raise "Couldn't create a new reader. Reason: #{inspect(reason)}"
     end
   end
@@ -22,9 +22,9 @@ defmodule Xav.Reader do
   @doc """
   Creates a new file reader.
   """
-  @spec new(String.t()) :: {:ok, t()} | {:error, term()}
-  def new(path) do
-    case Xav.NIF.new_reader(path) do
+  @spec new(String.t(), boolean()) :: {:ok, t()} | {:error, term()}
+  def new(path, device? \\ false) do
+    case Xav.NIF.new_reader(path, to_int(device?)) do
       {:ok, reader} -> {:ok, %__MODULE__{reader: reader}}
       {:error, _reason} = err -> err
     end
@@ -46,4 +46,7 @@ defmodule Xav.Reader do
         err
     end
   end
+
+  defp to_int(true), do: 1
+  defp to_int(false), do: 0
 end

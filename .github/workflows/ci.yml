@@ -36,6 +36,6 @@ jobs:
         with:
           otp-version: ${{matrix.otp}}
           elixir-version: ${{matrix.elixir}}
-      - run: sudo apt install libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
+      - run: sudo apt install libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libavdevice-dev
       - run: mix deps.get
       - run: mix test

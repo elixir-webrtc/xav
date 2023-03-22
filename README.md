@@ -19,7 +19,7 @@ export C_INCLUDE_PATH=$C_INCLUDE_PATH:/usr/include/ffmpeg
 ### Ubuntu
 
 ```bash
-apt install libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
+apt install libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libavdevice-dev
 ```
 
 ### Windows
@@ -55,7 +55,7 @@ Kino.Image.new(tensor)
 * [x] - tests
 * [x] - README
 * [ ] - streams
-* [ ] - camera input 
+* [x] - camera input 
 * [x] - CI for linux
 * [ ] - CI for windows and mac
 * [x] - C debug logs

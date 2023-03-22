@@ -2,7 +2,7 @@
 
 void convert_to_rgb(AVFrame *src_frame, uint8_t *dst_data[], int dst_linesize[]);
 
-int reader_init(struct Reader *reader, char *path, size_t path_size) {
+int reader_init(struct Reader *reader, char *path, size_t path_size, int device_flag) {
   reader->path = XAV_ALLOC(path_size + 1);
   memcpy(reader->path, path, path_size);
   reader->path[path_size] = '\0';
@@ -13,10 +13,18 @@ int reader_init(struct Reader *reader, char *path, size_t path_size) {
   reader->c = NULL;
   reader->frame = NULL;
   reader->pkt = NULL;
+  reader->input_format = NULL;
+  reader->options = NULL;
+
+  if (device_flag == 1) {
+    avdevice_register_all();
+    reader->input_format = av_find_input_format("v4l2");
+    av_dict_set(&reader->options, "framerate", "10", 0);
+  }
 
   XAV_LOG_DEBUG("Trying to open %s", reader->path);
 
-  if (avformat_open_input(&reader->fmt_ctx, reader->path, NULL, NULL) < 0) {
+  if (avformat_open_input(&reader->fmt_ctx, reader->path, reader->input_format, NULL) < 0) {
     return -1;
   }
 

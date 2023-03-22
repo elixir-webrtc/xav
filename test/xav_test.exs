@@ -8,7 +8,7 @@ defmodule XavTest do
   end
 
   test "new_reader!/1" do
-    {:ok, %Xav.Reader{}} = Xav.new_reader("./test/fixtures/sample_h264.mp4")
+    %Xav.Reader{} = Xav.new_reader!("./test/fixtures/sample_h264.mp4")
     assert_raise RuntimeError, fn -> Xav.new_reader!("non_existing_input") end
   end
 
