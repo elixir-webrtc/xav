@@ -14,17 +14,17 @@ ERL_NIF_TERM new_reader(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   }
 
   int device_flag;
-  if (!enif_get_int(env, argv[1], &device_flag)){
+  if (!enif_get_int(env, argv[1], &device_flag)) {
     return xav_nif_raise(env, "invalid_device_flag");
   }
 
   int media_type_flag;
   enum AVMediaType media_type;
-  if (!enif_get_int(env, argv[2], &media_type_flag)){
+  if (!enif_get_int(env, argv[2], &media_type_flag)) {
     return xav_nif_raise(env, "invalid_media_type_flag");
   }
 
-  if (media_type_flag==1) {
+  if (media_type_flag == 1) {
     media_type = AVMEDIA_TYPE_VIDEO;
   } else {
     media_type = AVMEDIA_TYPE_AUDIO;
@@ -66,12 +66,14 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   XAV_LOG_DEBUG("Returning to Erlang");
 
   ERL_NIF_TERM frame_term;
-  if (reader->media_type==AVMEDIA_TYPE_VIDEO) {
-  frame_term =
-      xav_nif_frame_to_term(env, reader->frame_data, reader->frame_linesize, reader->frame->width,
-                            reader->frame->height, reader->frame->pts);
-  } else if (reader->media_type==AVMEDIA_TYPE_AUDIO) {
-    size_t unpadded_linesize = reader->frame->nb_samples * av_get_bytes_per_sample(reader->frame->format) * reader->frame->channels;
+  if (reader->media_type == AVMEDIA_TYPE_VIDEO) {
+    frame_term =
+        xav_nif_frame_to_term(env, reader->frame_data, reader->frame_linesize, reader->frame->width,
+                              reader->frame->height, reader->frame->pts);
+  } else if (reader->media_type == AVMEDIA_TYPE_AUDIO) {
+    size_t unpadded_linesize = reader->frame->nb_samples *
+                               av_get_bytes_per_sample(reader->frame->format) *
+                               reader->frame->channels;
     ERL_NIF_TERM data_term;
     unsigned char *ptr = enif_make_new_binary(env, unpadded_linesize, &data_term);
     memcpy(ptr, reader->frame_data[0], unpadded_linesize);

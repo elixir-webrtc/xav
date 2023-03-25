@@ -2,7 +2,8 @@
 
 void convert_to_rgb(AVFrame *src_frame, uint8_t *dst_data[], int dst_linesize[]);
 
-int reader_init(struct Reader *reader, char *path, size_t path_size, int device_flag, enum AVMediaType media_type) {
+int reader_init(struct Reader *reader, char *path, size_t path_size, int device_flag,
+                enum AVMediaType media_type) {
   int ret;
   reader->path = XAV_ALLOC(path_size + 1);
   memcpy(reader->path, path, path_size);
@@ -35,8 +36,7 @@ int reader_init(struct Reader *reader, char *path, size_t path_size, int device_
     return -2;
   }
 
-  reader->stream_idx =
-      av_find_best_stream(reader->fmt_ctx, media_type, -1, -1, &reader->codec, 0);
+  reader->stream_idx = av_find_best_stream(reader->fmt_ctx, media_type, -1, -1, &reader->codec, 0);
   if (reader->stream_idx < 0) {
     return -2;
   }
@@ -193,22 +193,26 @@ fin:
   } else if (reader->media_type == AVMEDIA_TYPE_VIDEO) {
     reader->frame_data = reader->frame->data;
     reader->frame_linesize = reader->frame->linesize;
-  } else if (reader->media_type == AVMEDIA_TYPE_AUDIO && av_sample_fmt_is_planar(reader->frame->format) == 1) {
+  } else if (reader->media_type == AVMEDIA_TYPE_AUDIO &&
+             av_sample_fmt_is_planar(reader->frame->format) == 1) {
     // convert to interleaved
     int channels = reader->frame->channels;
     int samples_per_channel = reader->frame->nb_samples;
-    
-    //reader->frame_data = (uint8_t**)malloc(sizeof(uint8_t *));
-    //reader->frame_data[0] = (uint8_t*)malloc(sizeof(uint8_t) * av_get_bytes_per_sample(out_sample_fmt) * samples_per_channel * channels);
-    ret = av_samples_alloc(&reader->rgb_dst_data[0], &reader->rgb_dst_linesize[0], channels, samples_per_channel, reader->frame->format, 0);
+
+    // reader->frame_data = (uint8_t**)malloc(sizeof(uint8_t *));
+    // reader->frame_data[0] = (uint8_t*)malloc(sizeof(uint8_t) *
+    // av_get_bytes_per_sample(out_sample_fmt) * samples_per_channel * channels);
+    ret = av_samples_alloc(&reader->rgb_dst_data[0], &reader->rgb_dst_linesize[0], channels,
+                           samples_per_channel, reader->frame->format, 0);
     if (ret < 0) {
       return ret;
     }
 
-    ret = swr_convert(reader->swr_ctx, &reader->rgb_dst_data[0], samples_per_channel, (const uint8_t **)reader->frame->data, samples_per_channel);
+    ret = swr_convert(reader->swr_ctx, &reader->rgb_dst_data[0], samples_per_channel,
+                      (const uint8_t **)reader->frame->data, samples_per_channel);
     if (ret < 0) {
       return ret;
-    } 
+    }
 
     reader->frame_data = reader->rgb_dst_data;
     reader->frame_linesize = reader->rgb_dst_linesize;
@@ -223,7 +227,8 @@ void reader_free_frame(struct Reader *reader) {
   av_frame_unref(reader->frame);
   if (reader->media_type == AVMEDIA_TYPE_AUDIO && reader->frame_data == reader->rgb_dst_data) {
     av_freep(&reader->frame_data[0]);
-  } else if (reader->media_type == AVMEDIA_TYPE_VIDEO && reader->frame_data == reader->rgb_dst_data) {
+  } else if (reader->media_type == AVMEDIA_TYPE_VIDEO &&
+             reader->frame_data == reader->rgb_dst_data) {
     av_freep(&reader->frame_data[0]);
   }
 }
