@@ -4,7 +4,7 @@ ErlNifResourceType *reader_resource_type;
 
 ERL_NIF_TERM new_reader(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
-  if (argc != 2) {
+  if (argc != 3) {
     return xav_nif_raise(env, "invalid_arg_count");
   }
 
@@ -18,9 +18,21 @@ ERL_NIF_TERM new_reader(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "invalid_device_flag");
   }
 
+  int media_type_flag;
+  enum AVMediaType media_type;
+  if (!enif_get_int(env, argv[2], &media_type_flag)){
+    return xav_nif_raise(env, "invalid_media_type_flag");
+  }
+
+  if (media_type_flag==1) {
+    media_type = AVMEDIA_TYPE_VIDEO;
+  } else {
+    media_type = AVMEDIA_TYPE_AUDIO;
+  }
+
   struct Reader *reader = enif_alloc_resource(reader_resource_type, sizeof(struct Reader));
 
-  int ret = reader_init(reader, bin.data, bin.size, device_flag);
+  int ret = reader_init(reader, bin.data, bin.size, device_flag, media_type);
 
   if (ret == -1) {
     return xav_nif_error(env, "couldnt_open_avformat_input");
@@ -53,11 +65,26 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
   XAV_LOG_DEBUG("Returning to Erlang");
 
-  ERL_NIF_TERM frame_term =
+  ERL_NIF_TERM frame_term;
+  if (reader->media_type==AVMEDIA_TYPE_VIDEO) {
+  frame_term =
       xav_nif_frame_to_term(env, reader->frame_data, reader->frame_linesize, reader->frame->width,
                             reader->frame->height, reader->frame->pts);
+  } else if (reader->media_type==AVMEDIA_TYPE_AUDIO) {
+    size_t unpadded_linesize = reader->frame->nb_samples * av_get_bytes_per_sample(reader->frame->format) * reader->frame->channels;
+    ERL_NIF_TERM data_term;
+    unsigned char *ptr = enif_make_new_binary(env, unpadded_linesize, &data_term);
+    memcpy(ptr, reader->frame_data[0], unpadded_linesize);
 
-  reader_unref_frame(reader);
+    ERL_NIF_TERM height_term = enif_make_int(env, reader->frame->sample_rate);
+    ERL_NIF_TERM width_term = enif_make_int(env, reader->frame->nb_samples);
+    ERL_NIF_TERM pts_term = enif_make_int64(env, reader->frame->format);
+    fprintf(stderr, "%s\n", av_get_sample_fmt_name(reader->frame->format));
+
+    frame_term = enif_make_tuple(env, 4, data_term, width_term, height_term, pts_term);
+  }
+
+  reader_free_frame(reader);
 
   return xav_nif_ok(env, frame_term);
 }
@@ -67,7 +94,7 @@ void free_reader(ErlNifEnv *env, void *obj) {
   reader_free(reader);
 }
 
-static ErlNifFunc xav_funcs[] = {{"new_reader", 2, new_reader},
+static ErlNifFunc xav_funcs[] = {{"new_reader", 3, new_reader},
                                  {"next_frame", 1, next_frame, ERL_NIF_DIRTY_JOB_CPU_BOUND}};
 
 static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {

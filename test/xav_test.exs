@@ -18,6 +18,15 @@ defmodule XavTest do
     for _i <- 0..(30 * 5), do: assert({:ok, %Xav.Frame{}} = Xav.next_frame(r))
   end
 
+  # @tag :debug
+  # test "next_frame/1 audio" do
+  #  {:ok, r} = Xav.new_reader("./test/fixtures/sample.mp3", false)
+  #  for _i <- 0.. 5 do
+  #    assert({:ok, %Xav.Frame{}=frame} = Xav.next_frame(r))
+  #    IO.inspect({byte_size(frame.data), frame})
+  #  end
+  # end
+
   test "to_nx/1" do
     {:ok, r} = Xav.new_reader("./test/fixtures/sample_h264.mp4")
     {:ok, frame} = Xav.next_frame(r)

@@ -18,7 +18,7 @@ CFLAGS = -fPIC -I$(ERTS_INCLUDE_DIR) -I${FFMPEG_INCLUDE_DIR} -I${XAV_DIR} -share
 LDFLAGS = -L$(FFMPEG_LIB_DIR) -Wl,--whole-archive -lavcodec -lswscale -lavutil -lavformat -Wl,--no-whole-archive 
 else
 CFLAGS = -fPIC -I$(ERTS_INCLUDE_DIR) -I${XAV_DIR} -shared $(XAV_DEBUG_LOGS)
-LDFLAGS = -lavcodec -lswscale -lavutil -lavformat -lavdevice
+LDFLAGS = -lavcodec -lswscale -lavutil -lavformat -lavdevice -lswresample
 endif
 
 $(XAV_SO): Makefile $(XAV_DIR)/xav_nif.c $(XAV_DIR)/reader.h $(XAV_DIR)/reader.c $(XAV_DIR)/utils.h $(XAV_DIR)/utils.c
