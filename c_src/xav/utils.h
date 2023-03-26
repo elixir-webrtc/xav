@@ -16,5 +16,5 @@ void print_supported_pix_fmts(AVCodec *codec);
 ERL_NIF_TERM xav_nif_ok(ErlNifEnv *env, ERL_NIF_TERM data_term);
 ERL_NIF_TERM xav_nif_error(ErlNifEnv *env, char *reason);
 ERL_NIF_TERM xav_nif_raise(ErlNifEnv *env, char *msg);
-ERL_NIF_TERM xav_nif_frame_to_term(ErlNifEnv *env, unsigned char *data[], int *linesize, int width,
-                                   int height, int64_t pts);
+ERL_NIF_TERM xav_nif_frame_to_term(ErlNifEnv *env, unsigned char *data[], int *linesize,
+                                   const char *out_format_name, int width, int height, int64_t pts);

@@ -40,18 +40,8 @@ ERL_NIF_TERM new_reader(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "couldnt_create_new_reader");
   }
 
-  ERL_NIF_TERM format_term;
-  const char *name;
-  if (reader->media_type == AVMEDIA_TYPE_AUDIO && reader->swr_ctx != NULL) {
-    enum AVSampleFormat out_sample_fmt;
-    av_opt_get_sample_fmt(reader->swr_ctx, "out_sample_fmt", 0, &out_sample_fmt);
-    name = av_get_sample_fmt_name(out_sample_fmt);
-  } else if (reader->media_type == AVMEDIA_TYPE_AUDIO) {
-    name = av_get_sample_fmt_name(reader->c->sample_fmt);
-  } else {
-    name = "rgb";
-  }
-  format_term = enif_make_atom(env, name);
+  ERL_NIF_TERM in_format_term = enif_make_atom(env, reader->in_format_name);
+  ERL_NIF_TERM out_format_term = enif_make_atom(env, reader->out_format_name);
 
   ERL_NIF_TERM sample_rate_term;
   if (reader->media_type == AVMEDIA_TYPE_AUDIO) {
@@ -68,12 +58,12 @@ ERL_NIF_TERM new_reader(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   ERL_NIF_TERM ok_term = enif_make_atom(env, "ok");
 
   if (reader->media_type == AVMEDIA_TYPE_AUDIO) {
-    return enif_make_tuple(env, 7, ok_term, reader_term, format_term, sample_rate_term,
-                           bit_rate_term, duration_term, codec_term);
+    return enif_make_tuple(env, 8, ok_term, reader_term, in_format_term, out_format_term,
+                           sample_rate_term, bit_rate_term, duration_term, codec_term);
   }
 
-  return enif_make_tuple(env, 6, ok_term, reader_term, format_term, bit_rate_term, duration_term,
-                         codec_term);
+  return enif_make_tuple(env, 7, ok_term, reader_term, in_format_term, out_format_term,
+                         bit_rate_term, duration_term, codec_term);
 }
 
 ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
@@ -98,9 +88,9 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
   ERL_NIF_TERM frame_term;
   if (reader->media_type == AVMEDIA_TYPE_VIDEO) {
-    frame_term =
-        xav_nif_frame_to_term(env, reader->frame_data, reader->frame_linesize, reader->frame->width,
-                              reader->frame->height, reader->frame->pts);
+    frame_term = xav_nif_frame_to_term(env, reader->frame_data, reader->frame_linesize,
+                                       reader->out_format_name, reader->frame->width,
+                                       reader->frame->height, reader->frame->pts);
   } else if (reader->media_type == AVMEDIA_TYPE_AUDIO) {
     size_t unpadded_linesize = reader->frame->nb_samples *
                                av_get_bytes_per_sample(reader->frame->format) *
@@ -109,12 +99,11 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     unsigned char *ptr = enif_make_new_binary(env, unpadded_linesize, &data_term);
     memcpy(ptr, reader->frame_data[0], unpadded_linesize);
 
-    ERL_NIF_TERM height_term = enif_make_int(env, reader->frame->sample_rate);
-    ERL_NIF_TERM width_term = enif_make_int(env, reader->frame->nb_samples);
-    ERL_NIF_TERM pts_term = enif_make_int64(env, reader->frame->format);
-    fprintf(stderr, "%s\n", av_get_sample_fmt_name(reader->frame->format));
+    ERL_NIF_TERM samples_term = enif_make_int(env, reader->frame->nb_samples);
+    ERL_NIF_TERM format_term = enif_make_atom(env, reader->out_format_name);
+    ERL_NIF_TERM pts_term = enif_make_int(env, reader->frame->pts);
 
-    frame_term = enif_make_tuple(env, 4, data_term, width_term, height_term, pts_term);
+    frame_term = enif_make_tuple(env, 4, data_term, format_term, samples_term, pts_term);
   }
 
   reader_free_frame(reader);

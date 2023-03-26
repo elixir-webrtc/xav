@@ -19,6 +19,8 @@ int reader_init(struct Reader *reader, char *path, size_t path_size, int device_
   reader->options = NULL;
   reader->swr_ctx = NULL;
   reader->media_type = media_type;
+  reader->in_format_name = NULL;
+  reader->out_format_name = NULL;
 
   if (device_flag == 1) {
     avdevice_register_all();
@@ -80,6 +82,12 @@ int reader_init(struct Reader *reader, char *path, size_t path_size, int device_
     if (ret < 0) {
       return ret;
     }
+
+    reader->in_format_name = av_get_sample_fmt_name(reader->c->sample_fmt);
+    reader->out_format_name = av_get_sample_fmt_name(out_sample_fmt);
+  } else {
+    reader->in_format_name = av_get_pix_fmt_name(reader->c->pix_fmt);
+    reader->out_format_name = "rgb";
   }
 
   return 0;

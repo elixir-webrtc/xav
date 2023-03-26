@@ -25,6 +25,9 @@ struct Reader {
   enum AVMediaType media_type;
   SwrContext *swr_ctx;
 
+  const char *in_format_name;
+  const char *out_format_name;
+
   // used for converting decoded frame
   // to rgb pixel format
   uint8_t *rgb_dst_data[4];
