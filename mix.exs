@@ -31,7 +31,7 @@ defmodule Xav.MixProject do
   defp package do
     [
       files: ~w(lib .formatter.exs mix.exs README* LICENSE* c_src),
-      license: ["MIT"],
+      licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/mickel8/xav"}
     ]
   end
