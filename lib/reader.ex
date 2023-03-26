@@ -3,6 +3,15 @@ defmodule Xav.Reader do
   Media reader.
   """
 
+  @typedoc """
+  Reader options.
+
+  * `read` - determines which stream to read from a file with both audio and video.
+  Defaults to `:video`.
+  * `device?` - determines whether path points to video camera. Defaults to `false`.
+  """
+  @type opts :: [read: :audio | :video, device?: boolean]
+
   @type t() :: %__MODULE__{
           reader: reference(),
           in_format: atom(),
@@ -19,9 +28,9 @@ defmodule Xav.Reader do
   @doc """
   The same as new/1 but raises on error.
   """
-  @spec new!(String.t(), boolean(), boolean()) :: t()
-  def new!(path, video? \\ true, device? \\ false) do
-    case new(path, video?, device?) do
+  @spec new!(String.t(), opts) :: t()
+  def new!(path, opts) do
+    case new(path, opts) do
       {:ok, reader} -> reader
       {:error, reason} -> raise "Couldn't create a new reader. Reason: #{inspect(reason)}"
     end
@@ -29,10 +38,19 @@ defmodule Xav.Reader do
 
   @doc """
   Creates a new media reader.
+
+  Both reading from a file and video camera is supported.
+  In case of video camera, v4l2 driver is required and FPS are 
+  locked to 10.
+
+  Microphone input is not supported.
   """
-  @spec new(String.t(), boolean(), boolean()) :: {:ok, t()} | {:error, term()}
-  def new(path, video? \\ true, device? \\ false) do
-    case Xav.NIF.new_reader(path, to_int(device?), to_int(video?)) do
+  @spec new(String.t(), opts()) :: {:ok, t()} | {:error, term()}
+  def new(path, opts) do
+    read = opts[:read] || :video
+    device? = opts[:device?] || false
+
+    case Xav.NIF.new_reader(path, to_int(device?), to_int(read)) do
       {:ok, reader, in_format, out_format, sample_rate, bit_rate, duration, codec} ->
         {:ok,
          %__MODULE__{
@@ -64,7 +82,7 @@ defmodule Xav.Reader do
   @doc """
   Reads next frame.
 
-  Frame is always decoded.
+  Frame is always decoded. Video frames are always in RGB format.
   """
   @spec next_frame(t()) :: {:ok, Xav.Frame.t()} | {:error, :eof}
   def next_frame(%__MODULE__{reader: reader}) do
@@ -84,6 +102,8 @@ defmodule Xav.Reader do
   defp to_human_readable(:mp3float), do: :mp3
   defp to_human_readable(other), do: other
 
+  defp to_int(:video), do: 1
+  defp to_int(:audio), do: 0
   defp to_int(true), do: 1
   defp to_int(false), do: 0
 end

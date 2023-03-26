@@ -35,7 +35,7 @@ defmodule Xav.MixProject do
       links: %{"GitHub" => "https://github.com/mickel8/xav"}
     ]
   end
-    
+
   defp deps do
     [
       {:nx, "~> 0.5"},
