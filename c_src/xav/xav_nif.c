@@ -40,9 +40,40 @@ ERL_NIF_TERM new_reader(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "couldnt_create_new_reader");
   }
 
+  ERL_NIF_TERM format_term;
+  const char *name;
+  if (reader->media_type == AVMEDIA_TYPE_AUDIO && reader->swr_ctx != NULL) {
+    enum AVSampleFormat out_sample_fmt;
+    av_opt_get_sample_fmt(reader->swr_ctx, "out_sample_fmt", 0, &out_sample_fmt);
+    name = av_get_sample_fmt_name(out_sample_fmt);
+  } else if (reader->media_type == AVMEDIA_TYPE_AUDIO) {
+    name = av_get_sample_fmt_name(reader->c->sample_fmt);
+  } else {
+    name = "rgb";
+  }
+  format_term = enif_make_atom(env, name);
+
+  ERL_NIF_TERM sample_rate_term;
+  if (reader->media_type == AVMEDIA_TYPE_AUDIO) {
+    sample_rate_term = enif_make_int(env, reader->c->sample_rate);
+  }
+
+  ERL_NIF_TERM bit_rate_term = enif_make_int64(env, reader->fmt_ctx->bit_rate);
+  ERL_NIF_TERM duration_term = enif_make_int64(env, reader->fmt_ctx->duration / AV_TIME_BASE);
+  ERL_NIF_TERM codec_term = enif_make_atom(env, reader->codec->name);
+
   ERL_NIF_TERM reader_term = enif_make_resource(env, reader);
   enif_release_resource(reader);
-  return xav_nif_ok(env, reader_term);
+
+  ERL_NIF_TERM ok_term = enif_make_atom(env, "ok");
+
+  if (reader->media_type == AVMEDIA_TYPE_AUDIO) {
+    return enif_make_tuple(env, 7, ok_term, reader_term, format_term, sample_rate_term,
+                           bit_rate_term, duration_term, codec_term);
+  }
+
+  return enif_make_tuple(env, 6, ok_term, reader_term, format_term, bit_rate_term, duration_term,
+                         codec_term);
 }
 
 ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {

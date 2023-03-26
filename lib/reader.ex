@@ -3,10 +3,20 @@ defmodule Xav.Reader do
   File/network reader.
   """
 
-  @type t() :: %__MODULE__{reader: reference()}
+  @type audio_format() :: atom()
+  @type video_format() :: :rgb
 
-  @enforce_keys [:reader]
-  defstruct @enforce_keys
+  @type t() :: %__MODULE__{
+          reader: reference(),
+          format: audio_format() | video_format(),
+          sample_rate: integer() | nil,
+          bit_rate: integer(),
+          duration: integer(),
+          codec: atom()
+        }
+
+  @enforce_keys [:reader, :format, :bit_rate, :duration, :codec]
+  defstruct @enforce_keys ++ [:sample_rate]
 
   @doc """
   The same as new/1 but raises on error.
@@ -25,8 +35,29 @@ defmodule Xav.Reader do
   @spec new(String.t(), boolean(), boolean()) :: {:ok, t()} | {:error, term()}
   def new(path, video? \\ true, device? \\ false) do
     case Xav.NIF.new_reader(path, to_int(device?), to_int(video?)) do
-      {:ok, reader} -> {:ok, %__MODULE__{reader: reader}}
-      {:error, _reason} = err -> err
+      {:ok, reader, format, sample_rate, bit_rate, duration, codec} ->
+        {:ok,
+         %__MODULE__{
+           reader: reader,
+           format: format,
+           sample_rate: sample_rate,
+           bit_rate: bit_rate,
+           duration: duration,
+           codec: to_human_readable(codec)
+         }}
+
+      {:ok, reader, format, bit_rate, duration, codec} ->
+        {:ok,
+         %__MODULE__{
+           reader: reader,
+           format: format,
+           bit_rate: bit_rate,
+           duration: duration,
+           codec: to_human_readable(codec)
+         }}
+
+      {:error, _reason} = err ->
+        err
     end
   end
 
@@ -46,6 +77,10 @@ defmodule Xav.Reader do
         err
     end
   end
+
+  defp to_human_readable(:libdav1d), do: :av1
+  defp to_human_readable(:mp3float), do: :mp3
+  defp to_human_readable(other), do: other
 
   defp to_int(true), do: 1
   defp to_int(false), do: 0
