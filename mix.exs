@@ -11,6 +11,8 @@ defmodule Xav.MixProject do
       version: "0.1.0",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
+      description: "Elixir media library built on top of FFmpeg",
+      package: package(),
       compilers: [:native] ++ Mix.compilers(),
       make_env: %{"USE_BUNDLED_FFMPEG" => "#{get_platform() in @precompiled_ffmpeg_platforms}"},
       aliases: [
@@ -20,14 +22,20 @@ defmodule Xav.MixProject do
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
   def application do
     [
       extra_applications: [:logger]
     ]
   end
 
-  # Run "mix help deps" to learn about dependencies.
+  defp package do
+    [
+      files: ~w(lib .formatter.exs mix.exs README* LICENSE* c_src),
+      license: ["MIT"],
+      links: %{"GitHub" => "https://github.com/mickel8/xav"}
+    ]
+  end
+    
   defp deps do
     [
       {:nx, "~> 0.5"},
