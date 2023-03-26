@@ -1,5 +1,7 @@
 # Xav
 
+[![Documentation](https://img.shields.io/badge/-Documentation-blueviolet)](https://hexdocs.pm/xav/)
+
 Elixir wrapper over FFmpeg for reading audio and video files.
 
 See an interview with FFmpeg enthusiast:  https://youtu.be/9kaIXkImCAM
