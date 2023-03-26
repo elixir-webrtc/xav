@@ -8,7 +8,7 @@ defmodule Xav.MixProject do
   def project do
     [
       app: :xav,
-      version: "0.1.0",
+      version: "0.1.1",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       description: "Elixir media library built on top of FFmpeg",
@@ -30,7 +30,7 @@ defmodule Xav.MixProject do
 
   defp package do
     [
-      files: ~w(lib .formatter.exs mix.exs README* LICENSE* c_src),
+      files: ~w(lib .formatter.exs mix.exs README* LICENSE* c_src Makefile),
       licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/mickel8/xav"}
     ]
