@@ -12,7 +12,7 @@ defmodule Xav.NIF do
 
   def next_frame(_reader), do: :erlang.nif_error(:undef)
 
-  def new_decoder(), do: :erlang.nif_error(:undef)
+  def new_decoder(_codec), do: :erlang.nif_error(:undef)
 
   def decode(_decoder, _data, _pts, _dts), do: :erlang.nif_error(:undef)
 end

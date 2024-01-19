@@ -114,7 +114,32 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 }
 
 ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  if (argc != 1) {
+    return xav_nif_raise(env, "invalid_arg_count");
+  }
+
   struct Decoder *decoder = enif_alloc_resource(decoder_resource_type, sizeof(struct Decoder));
+
+  int codec_len;
+  if (!enif_get_atom_length(env, argv[0], &codec_len, ERL_NIF_UTF8)) {
+    return xav_nif_raise(env, "failed_to_get_atom_length");
+  }
+
+  char *codec = (char *)calloc(codec_len+1, sizeof(char*));
+  
+  if (enif_get_atom(env, argv[0], codec, codec_len+1, ERL_NIF_UTF8) == 0) {
+    return xav_nif_raise(env, "failed_to_get_atom");
+  }
+
+  if (strcmp(codec, "opus") == 0) {
+    decoder->media_type = AVMEDIA_TYPE_AUDIO;
+    decoder->codec = avcodec_find_decoder(AV_CODEC_ID_OPUS);
+  } else if (strcmp(codec, "vp8") == 0) {
+    decoder->media_type = AVMEDIA_TYPE_VIDEO;
+    decoder->codec = avcodec_find_decoder(AV_CODEC_ID_VP8);
+  } else {
+    return xav_nif_raise(env, "invalid_codec");
+  }
 
   decoder->codec = avcodec_find_decoder(AV_CODEC_ID_VP8);
   if (!decoder->codec){
@@ -152,12 +177,12 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   }
 
   int pts;
-  if (!enif_get_int64(env, argv[2], &pts)) {
+  if (!enif_get_int(env, argv[2], &pts)) {
     return xav_nif_raise(env, "couldnt_get_int");
   }
 
   int dts;
-  if (!enif_get_int64(env, argv[3], &pts)) {
+  if (!enif_get_int(env, argv[3], &pts)) {
     return xav_nif_raise(env, "couldnt_get_int");
   }
 
@@ -173,15 +198,11 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   pkt->pts = pts;
   pkt->dts = dts;
 
-  // printf("size: %d\n", data.size);
-
   int ret;
   ret = avcodec_send_packet(decoder->c, pkt);
   if (ret != 0) {
     return enif_make_atom(env, "error");
   }
-
-  // printf("send ret: %d\n", ret);
 
   AVFrame *frame = av_frame_alloc();
   
@@ -216,7 +237,36 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     frame_linesize = frame->linesize;
   }
 
-  ERL_NIF_TERM frame_term = xav_nif_frame_to_term(env, frame_data, frame_linesize, "vp8", frame->width, frame->height, frame->pts);
+  ERL_NIF_TERM frame_term;
+  if (decoder->media_type == AVMEDIA_TYPE_VIDEO) {
+    uint8_t **frame_data;
+    int *frame_linesize;
+    uint8_t *rgb_dst_data[4];
+    int rgb_dst_linesize[4];
+    if (frame->format != AV_PIX_FMT_RGB24) {
+      // printf("Converting to rgb\n");
+      convert_to_rgb(frame, rgb_dst_data, rgb_dst_linesize);
+      frame_data=rgb_dst_data;
+      frame_linesize=rgb_dst_linesize;
+    } else {
+      frame_data = frame->data;
+      frame_linesize = frame->linesize;
+    }
+
+    frame_term = xav_nif_frame_to_term(env, frame_data, frame_linesize, "vp8", frame->width, frame->height, frame->pts);
+
+  } else if (decoder->media_type == AVMEDIA_TYPE_AUDIO) {
+    size_t unpadded_linesize = frame->nb_samples * av_get_bytes_per_sample(frame->format) * frame->channels;
+    ERL_NIF_TERM data_term;
+    unsigned char *ptr = enif_make_new_binary(env, unpadded_linesize, &data_term);
+    memcpy(ptr, frame_data[0], unpadded_linesize);
+
+    ERL_NIF_TERM samples_term = enif_make_int(env, frame->nb_samples);
+    ERL_NIF_TERM format_term = enif_make_atom(env, "opus");
+    ERL_NIF_TERM pts_term = enif_make_int(env, frame->pts);
+
+    frame_term = enif_make_tuple(env, 4, data_term, format_term, samples_term, pts_term);
+  }
 
   av_frame_free(&frame);
   return xav_nif_ok(env, frame_term);
@@ -237,7 +287,7 @@ void free_decoder(ErlNifEnv *env, void *obj) {
 
 static ErlNifFunc xav_funcs[] = {{"new_reader", 3, new_reader},
                                  {"next_frame", 1, next_frame, ERL_NIF_DIRTY_JOB_CPU_BOUND},
-                                 {"new_decoder", 0, new_decoder},
+                                 {"new_decoder", 1, new_decoder},
                                  {"decode", 4, decode, ERL_NIF_DIRTY_JOB_CPU_BOUND}};
 
 static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {

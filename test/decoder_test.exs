@@ -211,13 +211,19 @@ defmodule Xav.DecoderTest do
                90, 156, 15, 71, 87, 156, 176, 66, 252, 36, 162, 78, 29, 101, 60, 151, 57, 60, 153,
                132, 174, 104, 237, 126, 47, 81, 78, 74, 128>>
 
+  @tag :debug
   test "new/0" do
-    assert {:ok, decoder} = Xav.Decoder.new()
+    assert {:ok, decoder} = Xav.Decoder.new(:vp8)
     assert is_reference(decoder)
+
+    assert {:ok, decoder} = Xav.Decoder.new(:opus)
+    assert is_reference(decoder)
+
+    assert_raise(ErlangError, fn -> Xav.Decoder.new(:unknown) end)
   end
 
   test "decode/2" do
-    {:ok, decoder} = Xav.Decoder.new()
+    {:ok, decoder} = Xav.Decoder.new(:vp8)
 
     assert {:ok, %Xav.Frame{width: 640, height: 480, pts: 0, format: :vp8}} =
              Xav.Decoder.decode(decoder, @vp8_keyframe, 0, 0)

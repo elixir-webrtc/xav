@@ -1,6 +1,6 @@
 defmodule Xav.Decoder do
-  def new() do
-    Xav.NIF.new_decoder()
+  def new(codec) do
+    Xav.NIF.new_decoder(codec)
   end
 
   def decode(decoder, data, pts, dts) do
