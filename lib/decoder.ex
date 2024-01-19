@@ -4,7 +4,12 @@ defmodule Xav.Decoder do
   end
 
   def decode(decoder, data, pts, dts) do
-    {:ok, {data, format, width, height, pts}} = Xav.NIF.decode(decoder, data, pts, dts)
-    {:ok, Xav.Frame.new(data, format, width, height, pts)}
+    case Xav.NIF.decode(decoder, data, pts, dts) do
+      {:ok, {data, format, width, height, pts}} ->
+        {:ok, Xav.Frame.new(data, format, width, height, pts)}
+
+      {:ok, {data, format, samples, pts}} ->
+        {:ok, Xav.Frame.new(data, format, samples, pts)}
+    end
   end
 end

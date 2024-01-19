@@ -132,6 +132,7 @@ ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   }
 
   if (strcmp(codec, "opus") == 0) {
+    printf("opus\n");
     decoder->media_type = AVMEDIA_TYPE_AUDIO;
     decoder->codec = avcodec_find_decoder(AV_CODEC_ID_OPUS);
   } else if (strcmp(codec, "vp8") == 0) {
@@ -141,7 +142,6 @@ ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "invalid_codec");
   }
 
-  decoder->codec = avcodec_find_decoder(AV_CODEC_ID_VP8);
   if (!decoder->codec){
     return xav_nif_raise(env, "decoder_not_found");
   }
@@ -223,26 +223,26 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   //   return xav_nif_raise(env, "failed_to_decode2");
   // }
 
+  // uint8_t **frame_data;
+  // int *frame_linesize;
+  // uint8_t *rgb_dst_data[4];
+  // int rgb_dst_linesize[4];
+  // if (frame->format != AV_PIX_FMT_RGB24) {
+  //   // printf("Converting to rgb\n");
+  //   convert_to_rgb(frame, rgb_dst_data, rgb_dst_linesize);
+  //   frame_data=rgb_dst_data;
+  //   frame_linesize=rgb_dst_linesize;
+  // } else {
+  //   frame_data = frame->data;
+  //   frame_linesize = frame->linesize;
+  // }
+
   uint8_t **frame_data;
   int *frame_linesize;
   uint8_t *rgb_dst_data[4];
   int rgb_dst_linesize[4];
-  if (frame->format != AV_PIX_FMT_RGB24) {
-    // printf("Converting to rgb\n");
-    convert_to_rgb(frame, rgb_dst_data, rgb_dst_linesize);
-    frame_data=rgb_dst_data;
-    frame_linesize=rgb_dst_linesize;
-  } else {
-    frame_data = frame->data;
-    frame_linesize = frame->linesize;
-  }
-
   ERL_NIF_TERM frame_term;
   if (decoder->media_type == AVMEDIA_TYPE_VIDEO) {
-    uint8_t **frame_data;
-    int *frame_linesize;
-    uint8_t *rgb_dst_data[4];
-    int rgb_dst_linesize[4];
     if (frame->format != AV_PIX_FMT_RGB24) {
       // printf("Converting to rgb\n");
       convert_to_rgb(frame, rgb_dst_data, rgb_dst_linesize);
@@ -255,7 +255,64 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
     frame_term = xav_nif_frame_to_term(env, frame_data, frame_linesize, "vp8", frame->width, frame->height, frame->pts);
 
-  } else if (decoder->media_type == AVMEDIA_TYPE_AUDIO) {
+  }  
+  else if (decoder->media_type == AVMEDIA_TYPE_AUDIO &&
+             av_sample_fmt_is_planar(frame->format) == 1) {
+    SwrContext *swr_ctx = swr_alloc();
+    enum AVSampleFormat out_sample_fmt = av_get_alt_sample_fmt(frame->format, 0);
+    av_opt_set_channel_layout(swr_ctx, "in_channel_layout", frame->channel_layout, 0);
+    av_opt_set_channel_layout(swr_ctx, "out_channel_layout", frame->channel_layout, 0);
+    av_opt_set_int(swr_ctx, "in_sample_rate", frame->sample_rate, 0);
+    av_opt_set_int(swr_ctx, "out_sample_rate", frame->sample_rate, 0);
+    av_opt_set_sample_fmt(swr_ctx, "in_sample_fmt", frame->format, 0);
+    av_opt_set_sample_fmt(swr_ctx, "out_sample_fmt", out_sample_fmt, 0);
+
+    ret = swr_init(swr_ctx);
+    if (ret < 0) {
+      return xav_nif_raise(env, "failed_to_init_swr");
+    }
+
+    // convert to interleaved
+    int channels = frame->channels;
+    int samples_per_channel = frame->nb_samples;
+
+    // reader->frame_data = (uint8_t**)malloc(sizeof(uint8_t *));
+    // reader->frame_data[0] = (uint8_t*)malloc(sizeof(uint8_t) *
+    // av_get_bytes_per_sample(out_sample_fmt) * samples_per_channel * channels);
+    ret = av_samples_alloc(&rgb_dst_data[0], &rgb_dst_linesize[0], channels,
+                           samples_per_channel, frame->format, 0);
+    if (ret < 0) {
+      return ret;
+    }
+
+    ret = swr_convert(swr_ctx, &rgb_dst_data[0], samples_per_channel,
+                      (const uint8_t **)frame->data, samples_per_channel);
+    if (ret < 0) {
+      return ret;
+    }
+
+    frame_data = rgb_dst_data;
+    frame_linesize = rgb_dst_linesize;
+
+    size_t unpadded_linesize = frame->nb_samples * av_get_bytes_per_sample(frame->format) * frame->channels;
+    ERL_NIF_TERM data_term;
+    unsigned char *ptr = enif_make_new_binary(env, unpadded_linesize, &data_term);
+    memcpy(ptr, frame_data[0], unpadded_linesize);
+
+    ERL_NIF_TERM samples_term = enif_make_int(env, frame->nb_samples);
+
+
+    char *out_format_name = av_get_sample_fmt_name(out_sample_fmt);
+
+
+    ERL_NIF_TERM format_term = enif_make_atom(env, out_format_name);
+    ERL_NIF_TERM pts_term = enif_make_int(env, frame->pts);
+
+    frame_term = enif_make_tuple(env, 4, data_term, format_term, samples_term, pts_term);
+
+  } else {   
+    frame_data = frame->extended_data;
+
     size_t unpadded_linesize = frame->nb_samples * av_get_bytes_per_sample(frame->format) * frame->channels;
     ERL_NIF_TERM data_term;
     unsigned char *ptr = enif_make_new_binary(env, unpadded_linesize, &data_term);
@@ -266,8 +323,8 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     ERL_NIF_TERM pts_term = enif_make_int(env, frame->pts);
 
     frame_term = enif_make_tuple(env, 4, data_term, format_term, samples_term, pts_term);
-  }
-
+  } 
+  
   av_frame_free(&frame);
   return xav_nif_ok(env, frame_term);
 }
