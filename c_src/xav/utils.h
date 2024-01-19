@@ -1,5 +1,12 @@
 #include <erl_nif.h>
+// TODO revisit imports
 #include <libavcodec/avcodec.h>
+#include <libavdevice/avdevice.h>
+#include <libavformat/avformat.h>
+#include <libavutil/avutil.h>
+#include <libavutil/imgutils.h>
+#include <libswresample/swresample.h>
+#include <libswscale/swscale.h>
 
 #ifdef XAV_DEBUG
 #define XAV_LOG_DEBUG(X, ...)                                                                      \
@@ -12,6 +19,7 @@
 #define XAV_FREE(X) enif_free(X)
 
 void print_supported_pix_fmts(AVCodec *codec);
+void convert_to_rgb(AVFrame *src_frame, uint8_t *dst_data[], int dst_linesize[]);
 
 ERL_NIF_TERM xav_nif_ok(ErlNifEnv *env, ERL_NIF_TERM data_term);
 ERL_NIF_TERM xav_nif_error(ErlNifEnv *env, char *reason);

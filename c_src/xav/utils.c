@@ -10,6 +10,18 @@ void print_supported_pix_fmts(AVCodec *codec) {
   }
 }
 
+void convert_to_rgb(AVFrame *src_frame, uint8_t *dst_data[], int dst_linesize[]) {
+  struct SwsContext *sws_ctx =
+      sws_getContext(src_frame->width, src_frame->height, src_frame->format, src_frame->width,
+                     src_frame->height, AV_PIX_FMT_RGB24, SWS_BILINEAR, NULL, NULL, NULL);
+
+  av_image_alloc(dst_data, dst_linesize, src_frame->width, src_frame->height, AV_PIX_FMT_RGB24, 1);
+
+  // is this (const uint8_t * const*) cast really correct?
+  sws_scale(sws_ctx, (const uint8_t *const *)src_frame->data, src_frame->linesize, 0,
+            src_frame->height, dst_data, dst_linesize);
+}
+
 ERL_NIF_TERM xav_nif_ok(ErlNifEnv *env, ERL_NIF_TERM data_term) {
   ERL_NIF_TERM ok_term = enif_make_atom(env, "ok");
   return enif_make_tuple(env, 2, ok_term, data_term);
