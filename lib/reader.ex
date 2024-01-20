@@ -1,14 +1,14 @@
 defmodule Xav.Reader do
   @moduledoc """
-  Media reader.
+  Audio/video files reader.
   """
 
   @typedoc """
   Reader options.
 
-  * `read` - determines which stream to read from a file with both audio and video.
+  * `read` - determines which stream to read from a file.
   Defaults to `:video`.
-  * `device?` - determines whether path points to video camera. Defaults to `false`.
+  * `device?` - determines whether path points to the camera. Defaults to `false`.
   """
   @type opts :: [read: :audio | :video, device?: boolean]
 
@@ -28,8 +28,8 @@ defmodule Xav.Reader do
   @doc """
   The same as new/1 but raises on error.
   """
-  @spec new!(String.t(), opts) :: t()
-  def new!(path, opts) do
+  @spec new!(String.t(), opts()) :: t()
+  def new!(path, opts \\ []) do
     case new(path, opts) do
       {:ok, reader} -> reader
       {:error, reason} -> raise "Couldn't create a new reader. Reason: #{inspect(reason)}"
@@ -37,16 +37,16 @@ defmodule Xav.Reader do
   end
 
   @doc """
-  Creates a new media reader.
+  Creates a new audio/video reader.
 
-  Both reading from a file and video camera is supported.
-  In case of video camera, v4l2 driver is required and FPS are 
+  Both reading from a file and from a video camera are supported.
+  In case of using a video camera, the v4l2 driver is required, and FPS are 
   locked to 10.
 
   Microphone input is not supported.
   """
   @spec new(String.t(), opts()) :: {:ok, t()} | {:error, term()}
-  def new(path, opts) do
+  def new(path, opts \\ []) do
     read = opts[:read] || :video
     device? = opts[:device?] || false
 
@@ -80,9 +80,11 @@ defmodule Xav.Reader do
   end
 
   @doc """
-  Reads next frame.
+  Reads the next frame.
 
-  Frame is always decoded. Video frames are always in RGB format.
+  A frame is always decoded. 
+  Video frames are always in the RGB format.
+  Audio samples are always interleaved.
   """
   @spec next_frame(t()) :: {:ok, Xav.Frame.t()} | {:error, :eof}
   def next_frame(%__MODULE__{reader: reader}) do
