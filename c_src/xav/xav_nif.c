@@ -93,18 +93,8 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     frame_term = xav_nif_video_frame_to_term(env, reader->frame, reader->frame_data,
                                              reader->frame_linesize, reader->out_format_name);
   } else if (reader->media_type == AVMEDIA_TYPE_AUDIO) {
-    size_t unpadded_linesize = reader->frame->nb_samples *
-                               av_get_bytes_per_sample(reader->frame->format) *
-                               reader->frame->channels;
-    ERL_NIF_TERM data_term;
-    unsigned char *ptr = enif_make_new_binary(env, unpadded_linesize, &data_term);
-    memcpy(ptr, reader->frame_data[0], unpadded_linesize);
-
-    ERL_NIF_TERM samples_term = enif_make_int(env, reader->frame->nb_samples);
-    ERL_NIF_TERM format_term = enif_make_atom(env, reader->out_format_name);
-    ERL_NIF_TERM pts_term = enif_make_int(env, reader->frame->pts);
-
-    frame_term = enif_make_tuple(env, 4, data_term, format_term, samples_term, pts_term);
+    frame_term = xav_nif_audio_frame_to_term(env, reader->frame, reader->frame_data,
+                                             reader->out_format_name);
   }
 
   reader_free_frame(reader);
