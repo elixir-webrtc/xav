@@ -166,11 +166,14 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "couldnt_get_int");
   }
 
-  AVPacket *pkt = NULL;
-  pkt = av_packet_alloc();
-
+  AVPacket *pkt = av_packet_alloc();
   if (!pkt) {
     return xav_nif_raise(env, "couldnt_alloc_av_packet");
+  }
+
+  AVFrame *frame = av_frame_alloc();
+  if (!frame) {
+    return xav_nif_raise(env, "couldnt_alloc_frame");
   }
 
   pkt->data = data.data;
@@ -178,63 +181,17 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   pkt->pts = pts;
   pkt->dts = dts;
 
-  int ret;
-  ret = avcodec_send_packet(decoder->c, pkt);
-  if (ret != 0) {
-    return enif_make_atom(env, "error");
-  }
-
-  AVFrame *frame = av_frame_alloc();
-
-  if (!frame) {
-    return xav_nif_raise(env, "couldnt_alloc_frame");
-  }
-
-  ret = avcodec_receive_frame(decoder->c, frame);
-  if (ret != 0) {
+  if (decoder_decode(decoder, pkt, frame) != 0) {
     return xav_nif_raise(env, "failed_to_decode");
-  }
-
-  if (decoder->media_type == AVMEDIA_TYPE_AUDIO && decoder->out_format_name == NULL) {
-    enum AVSampleFormat out_sample_fmt = av_get_alt_sample_fmt(frame->format, 0);
-    decoder->out_format_name = av_get_sample_fmt_name(out_sample_fmt);
   }
 
   ERL_NIF_TERM frame_term;
   if (decoder->media_type == AVMEDIA_TYPE_VIDEO) {
-    if (frame->format != AV_PIX_FMT_RGB24) {
-      convert_to_rgb(frame, decoder->rgb_dst_data, decoder->rgb_dst_linesize);
-      decoder->frame_data = decoder->rgb_dst_data;
-      decoder->frame_linesize = decoder->rgb_dst_linesize;
-    } else {
-      decoder->frame_data = frame->data;
-      decoder->frame_linesize = frame->linesize;
-    }
 
     frame_term = xav_nif_frame_to_term(env, decoder->frame_data, decoder->frame_linesize, "rgb",
                                        frame->width, frame->height, frame->pts);
 
-  } else if (decoder->media_type == AVMEDIA_TYPE_AUDIO &&
-             av_sample_fmt_is_planar(frame->format) == 1) {
-    if (decoder->swr_ctx == NULL) {
-      if (init_swr_ctx_from_frame(&decoder->swr_ctx, frame) != 0) {
-        return xav_nif_raise(env, "failed_to_init_swr_ctx");
-      }
-    }
-
-    XAV_LOG_DEBUG("converting to interleaved");
-    if (convert_to_interleaved(decoder->swr_ctx, frame, decoder->rgb_dst_data,
-                               decoder->rgb_dst_linesize) != 0) {
-      return xav_nif_raise(env, "failed_to_convert_to_interleaved");
-    }
-
-    decoder->frame_data = decoder->rgb_dst_data;
-    decoder->frame_linesize = decoder->rgb_dst_linesize;
-
-    frame_term =
-        xav_nif_audio_frame_to_term(env, frame, decoder->frame_data, decoder->out_format_name);
-  } else {
-    decoder->frame_data = frame->extended_data;
+  } else if (decoder->media_type == AVMEDIA_TYPE_AUDIO) {
     frame_term =
         xav_nif_audio_frame_to_term(env, frame, decoder->frame_data, decoder->out_format_name);
   }

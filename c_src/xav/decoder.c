@@ -32,6 +32,50 @@ int decoder_init(struct Decoder *decoder, const char *codec) {
   return 0;
 }
 
-int decoder_decode(struct Decoder *decoder, AVPacket *pkt) {
+int decoder_decode(struct Decoder *decoder, AVPacket *pkt, AVFrame *frame) {
+  int ret;
+  ret = avcodec_send_packet(decoder->c, pkt);
+  if (ret != 0) {
+    return -1;
+  }
+
+  ret = avcodec_receive_frame(decoder->c, frame);
+  if (ret != 0) {
+    return -1;
+  }
+
+  if (decoder->media_type == AVMEDIA_TYPE_AUDIO && decoder->out_format_name == NULL) {
+    enum AVSampleFormat out_sample_fmt = av_get_alt_sample_fmt(frame->format, 0);
+    decoder->out_format_name = av_get_sample_fmt_name(out_sample_fmt);
+  }
+
+  if (decoder->media_type == AVMEDIA_TYPE_VIDEO) {
+    if (frame->format != AV_PIX_FMT_RGB24) {
+      convert_to_rgb(frame, decoder->rgb_dst_data, decoder->rgb_dst_linesize);
+      decoder->frame_data = decoder->rgb_dst_data;
+      decoder->frame_linesize = decoder->rgb_dst_linesize;
+    } else {
+      decoder->frame_data = frame->data;
+      decoder->frame_linesize = frame->linesize;
+    }
+  } else if (decoder->media_type == AVMEDIA_TYPE_AUDIO &&
+             av_sample_fmt_is_planar(frame->format) == 1) {
+    if (decoder->swr_ctx == NULL) {
+      if (init_swr_ctx_from_frame(&decoder->swr_ctx, frame) != 0) {
+        return -1;
+      }
+    }
+
+    if (convert_to_interleaved(decoder->swr_ctx, frame, decoder->rgb_dst_data,
+                               decoder->rgb_dst_linesize) != 0) {
+      return -1;
+    }
+
+    decoder->frame_data = decoder->rgb_dst_data;
+    decoder->frame_linesize = decoder->rgb_dst_linesize;
+  } else {
+    decoder->frame_data = frame->extended_data;
+  }
+
   return 0;
 }

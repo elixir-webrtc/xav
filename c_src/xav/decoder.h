@@ -18,4 +18,4 @@ struct Decoder {
 
 int decoder_init(struct Decoder *decoder, const char *codec);
 
-int decoder_decode(struct Decoder *decoder, AVPacket *pkt);
+int decoder_decode(struct Decoder *decoder, AVPacket *pkt, AVFrame *frame);
