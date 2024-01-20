@@ -119,7 +119,6 @@ ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   }
 
   struct Decoder *decoder = enif_alloc_resource(decoder_resource_type, sizeof(struct Decoder));
-  decoder->swr_ctx = NULL;
 
   int codec_len;
   if (!enif_get_atom_length(env, argv[0], &codec_len, ERL_NIF_UTF8)) {
@@ -132,30 +131,8 @@ ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "failed_to_get_atom");
   }
 
-  if (strcmp(codec, "opus") == 0) {
-    decoder->media_type = AVMEDIA_TYPE_AUDIO;
-    decoder->codec = avcodec_find_decoder(AV_CODEC_ID_OPUS);
-    // we will initialize out_format_name with the first frame
-    decoder->out_format_name = NULL;
-  } else if (strcmp(codec, "vp8") == 0) {
-    decoder->media_type = AVMEDIA_TYPE_VIDEO;
-    decoder->codec = avcodec_find_decoder(AV_CODEC_ID_VP8);
-    decoder->out_format_name = "rgb";
-  } else {
-    return xav_nif_raise(env, "invalid_codec");
-  }
-
-  if (!decoder->codec) {
-    return xav_nif_raise(env, "decoder_not_found");
-  }
-
-  decoder->c = avcodec_alloc_context3(decoder->codec);
-  if (!decoder->c) {
-    return xav_nif_raise(env, "failed_to_alloc_context");
-  }
-
-  if (avcodec_open2(decoder->c, decoder->codec, NULL) < 0) {
-    return xav_nif_raise(env, "failed_to_open_codec");
+  if (decoder_init(decoder, codec) != 0) {
+    return xav_nif_raise(env, "failed_to_init_decoder");
   }
 
   ERL_NIF_TERM decoder_term = enif_make_resource(env, decoder);
