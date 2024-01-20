@@ -38,7 +38,7 @@ defmodule Xav.MixProject do
 
   defp deps do
     [
-      {:nx, "~> 0.5"},
+      {:nx, "~> 0.6.0"},
       {:elixir_make, "~> 0.7", runtime: false},
       {:ex_doc, ">= 0.0.0", runtime: false, only: :dev},
       {:credo, ">= 0.0.0", runtime: false, only: :dev},

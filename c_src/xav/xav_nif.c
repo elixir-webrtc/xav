@@ -1,6 +1,8 @@
+#include "decoder.h"
 #include "reader.h"
 
 ErlNifResourceType *reader_resource_type;
+ErlNifResourceType *decoder_resource_type;
 
 ERL_NIF_TERM new_reader(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
@@ -88,22 +90,11 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
   ERL_NIF_TERM frame_term;
   if (reader->media_type == AVMEDIA_TYPE_VIDEO) {
-    frame_term = xav_nif_frame_to_term(env, reader->frame_data, reader->frame_linesize,
-                                       reader->out_format_name, reader->frame->width,
-                                       reader->frame->height, reader->frame->pts);
+    frame_term = xav_nif_video_frame_to_term(env, reader->frame, reader->frame_data,
+                                             reader->frame_linesize, reader->out_format_name);
   } else if (reader->media_type == AVMEDIA_TYPE_AUDIO) {
-    size_t unpadded_linesize = reader->frame->nb_samples *
-                               av_get_bytes_per_sample(reader->frame->format) *
-                               reader->frame->channels;
-    ERL_NIF_TERM data_term;
-    unsigned char *ptr = enif_make_new_binary(env, unpadded_linesize, &data_term);
-    memcpy(ptr, reader->frame_data[0], unpadded_linesize);
-
-    ERL_NIF_TERM samples_term = enif_make_int(env, reader->frame->nb_samples);
-    ERL_NIF_TERM format_term = enif_make_atom(env, reader->out_format_name);
-    ERL_NIF_TERM pts_term = enif_make_int(env, reader->frame->pts);
-
-    frame_term = enif_make_tuple(env, 4, data_term, format_term, samples_term, pts_term);
+    frame_term = xav_nif_audio_frame_to_term(env, reader->frame, reader->frame_data,
+                                             reader->out_format_name);
   }
 
   reader_free_frame(reader);
@@ -111,17 +102,117 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   return xav_nif_ok(env, frame_term);
 }
 
+ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  if (argc != 1) {
+    return xav_nif_raise(env, "invalid_arg_count");
+  }
+
+  struct Decoder *decoder = enif_alloc_resource(decoder_resource_type, sizeof(struct Decoder));
+
+  int codec_len;
+  if (!enif_get_atom_length(env, argv[0], &codec_len, ERL_NIF_LATIN1)) {
+    return xav_nif_raise(env, "failed_to_get_atom_length");
+  }
+
+  char *codec = (char *)calloc(codec_len + 1, sizeof(char *));
+
+  if (enif_get_atom(env, argv[0], codec, codec_len + 1, ERL_NIF_LATIN1) == 0) {
+    return xav_nif_raise(env, "failed_to_get_atom");
+  }
+
+  if (decoder_init(decoder, codec) != 0) {
+    return xav_nif_raise(env, "failed_to_init_decoder");
+  }
+
+  ERL_NIF_TERM decoder_term = enif_make_resource(env, decoder);
+  enif_release_resource(decoder);
+
+  return xav_nif_ok(env, decoder_term);
+}
+
+ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  if (argc != 4) {
+    return xav_nif_raise(env, "invalid_arg_count");
+  }
+
+  struct Decoder *decoder;
+  if (!enif_get_resource(env, argv[0], decoder_resource_type, (void **)&decoder)) {
+    return xav_nif_raise(env, "couldnt_get_decoder_resource");
+  }
+
+  ErlNifBinary data;
+  if (!enif_inspect_binary(env, argv[1], &data)) {
+    return xav_nif_raise(env, "couldnt_inspect_binary");
+  }
+
+  int pts;
+  if (!enif_get_int(env, argv[2], &pts)) {
+    return xav_nif_raise(env, "couldnt_get_int");
+  }
+
+  int dts;
+  if (!enif_get_int(env, argv[3], &pts)) {
+    return xav_nif_raise(env, "couldnt_get_int");
+  }
+
+  AVPacket *pkt = av_packet_alloc();
+  if (!pkt) {
+    return xav_nif_raise(env, "couldnt_alloc_av_packet");
+  }
+
+  AVFrame *frame = av_frame_alloc();
+  if (!frame) {
+    return xav_nif_raise(env, "couldnt_alloc_frame");
+  }
+
+  pkt->data = data.data;
+  pkt->size = data.size;
+  pkt->pts = pts;
+  pkt->dts = dts;
+
+  if (decoder_decode(decoder, pkt, frame) != 0) {
+    return xav_nif_raise(env, "failed_to_decode");
+  }
+
+  ERL_NIF_TERM frame_term;
+  if (decoder->media_type == AVMEDIA_TYPE_VIDEO) {
+
+    frame_term = xav_nif_video_frame_to_term(env, frame, decoder->frame_data,
+                                             decoder->frame_linesize, "rgb");
+
+  } else if (decoder->media_type == AVMEDIA_TYPE_AUDIO) {
+    frame_term =
+        xav_nif_audio_frame_to_term(env, frame, decoder->frame_data, decoder->out_format_name);
+  }
+
+  av_frame_free(&frame);
+  av_packet_free(&pkt);
+  return xav_nif_ok(env, frame_term);
+}
+
 void free_reader(ErlNifEnv *env, void *obj) {
+  XAV_LOG_DEBUG("Freeing Reader object");
   struct Reader *reader = (struct Reader *)obj;
   reader_free(reader);
 }
 
+void free_decoder(ErlNifEnv *env, void *obj) {
+  XAV_LOG_DEBUG("Freeing Decoder object");
+  struct Decoder *decoder = (struct Decoder *)obj;
+  decoder_free(decoder);
+}
+
 static ErlNifFunc xav_funcs[] = {{"new_reader", 3, new_reader},
-                                 {"next_frame", 1, next_frame, ERL_NIF_DIRTY_JOB_CPU_BOUND}};
+                                 {"next_frame", 1, next_frame, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+                                 {"new_decoder", 1, new_decoder},
+                                 {"decode", 4, decode, ERL_NIF_DIRTY_JOB_CPU_BOUND}};
 
 static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {
   reader_resource_type =
       enif_open_resource_type(env, NULL, "Reader", free_reader, ERL_NIF_RT_CREATE, NULL);
+
+  decoder_resource_type =
+      enif_open_resource_type(env, NULL, "Decoder", free_decoder, ERL_NIF_RT_CREATE, NULL);
   return 0;
 }
 

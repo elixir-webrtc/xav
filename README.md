@@ -24,8 +24,8 @@ end
 Read from a file:
 
 ```elixir
-r = Xav.new_reader!("./some_mp4_file.mp4")
-{:ok, %Xav.Frame{} = frame} = Xav.next_frame(r)
+r = Xav.Reader.new!("./some_mp4_file.mp4")
+{:ok, %Xav.Frame{} = frame} = Xav.Reader.next_frame(r)
 tensor = Xav.Frame.to_nx(frame)
 Kino.Image.new(tensor)
 ```
@@ -33,8 +33,8 @@ Kino.Image.new(tensor)
 Read from a camera:
 
 ```elixir
-r = Xav.new_reader!("/dev/video0", device?: true)
-{:ok, %Xav.Frame{} = frame} = Xav.next_frame(r)
+r = Xav.Reader.new!("/dev/video0", device?: true)
+{:ok, %Xav.Frame{} = frame} = Xav.Reader.next_frame(r)
 tensor = Xav.Frame.to_nx(frame)
 Kino.Image.new(tensor)
 ```
@@ -42,7 +42,7 @@ Kino.Image.new(tensor)
 Speech to text:
 
 ```elixir
-r = Xav.new_reader!("../sample.mp3", read: :audio)
+r = Xav.Reader.new!("../sample.mp3", read: :audio)
 
 {:ok, whisper} = Bumblebee.load_model({:hf, "openai/whisper-tiny"})
 {:ok, featurizer} = Bumblebee.load_featurizer({:hf, "openai/whisper-tiny"})
@@ -57,8 +57,8 @@ serving =
 # read a couple of frames
 frames =
   for _i <- 0..200 do
-    {:ok, frame} = Xav.next_frame(r)
-    Xav.to_nx(frame)
+    {:ok, frame} = Xav.Reader.next_frame(r)
+    Xav.Frame.to_nx(frame)
   end
 
 batch = Nx.Batch.concatenate(frames)

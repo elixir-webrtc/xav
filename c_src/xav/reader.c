@@ -1,6 +1,5 @@
 #include "reader.h"
-
-void convert_to_rgb(AVFrame *src_frame, uint8_t *dst_data[], int dst_linesize[]);
+#include "utils.h"
 
 int reader_init(struct Reader *reader, char *path, size_t path_size, int device_flag,
                 enum AVMediaType media_type) {
@@ -251,16 +250,4 @@ void reader_free(struct Reader *reader) {
   av_frame_free(&reader->frame);
   avformat_close_input(&reader->fmt_ctx);
   XAV_FREE(reader->path);
-}
-
-void convert_to_rgb(AVFrame *src_frame, uint8_t *dst_data[], int dst_linesize[]) {
-  struct SwsContext *sws_ctx =
-      sws_getContext(src_frame->width, src_frame->height, src_frame->format, src_frame->width,
-                     src_frame->height, AV_PIX_FMT_RGB24, SWS_BILINEAR, NULL, NULL, NULL);
-
-  av_image_alloc(dst_data, dst_linesize, src_frame->width, src_frame->height, AV_PIX_FMT_RGB24, 1);
-
-  // is this (const uint8_t * const*) cast really correct?
-  sws_scale(sws_ctx, (const uint8_t *const *)src_frame->data, src_frame->linesize, 0,
-            src_frame->height, dst_data, dst_linesize);
 }

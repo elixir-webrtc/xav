@@ -1,5 +1,11 @@
 #include <erl_nif.h>
 #include <libavcodec/avcodec.h>
+#include <libavdevice/avdevice.h>
+#include <libavformat/avformat.h>
+#include <libavutil/avutil.h>
+#include <libavutil/imgutils.h>
+#include <libswresample/swresample.h>
+#include <libswscale/swscale.h>
 
 #ifdef XAV_DEBUG
 #define XAV_LOG_DEBUG(X, ...)                                                                      \
@@ -12,9 +18,15 @@
 #define XAV_FREE(X) enif_free(X)
 
 void print_supported_pix_fmts(AVCodec *codec);
+int init_swr_ctx_from_frame(SwrContext **swr_ctx, AVFrame *frame);
+void convert_to_rgb(AVFrame *src_frame, uint8_t *dst_data[], int dst_linesize[]);
+int convert_to_interleaved(SwrContext *swr_ctx, AVFrame *src_frame, uint8_t **dst_data,
+                           int *dst_linesize);
 
 ERL_NIF_TERM xav_nif_ok(ErlNifEnv *env, ERL_NIF_TERM data_term);
 ERL_NIF_TERM xav_nif_error(ErlNifEnv *env, char *reason);
 ERL_NIF_TERM xav_nif_raise(ErlNifEnv *env, char *msg);
-ERL_NIF_TERM xav_nif_frame_to_term(ErlNifEnv *env, unsigned char *data[], int *linesize,
-                                   const char *out_format_name, int width, int height, int64_t pts);
+ERL_NIF_TERM xav_nif_video_frame_to_term(ErlNifEnv *env, AVFrame *frame, unsigned char *data[],
+                                         int *linesize, const char *out_format_name);
+ERL_NIF_TERM xav_nif_audio_frame_to_term(ErlNifEnv *env, AVFrame *frame, unsigned char *data[],
+                                         char *out_format_name);
