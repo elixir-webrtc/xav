@@ -90,9 +90,8 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
   ERL_NIF_TERM frame_term;
   if (reader->media_type == AVMEDIA_TYPE_VIDEO) {
-    frame_term = xav_nif_frame_to_term(env, reader->frame_data, reader->frame_linesize,
-                                       reader->out_format_name, reader->frame->width,
-                                       reader->frame->height, reader->frame->pts);
+    frame_term = xav_nif_video_frame_to_term(env, reader->frame, reader->frame_data,
+                                             reader->frame_linesize, reader->out_format_name);
   } else if (reader->media_type == AVMEDIA_TYPE_AUDIO) {
     size_t unpadded_linesize = reader->frame->nb_samples *
                                av_get_bytes_per_sample(reader->frame->format) *
@@ -188,8 +187,8 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   ERL_NIF_TERM frame_term;
   if (decoder->media_type == AVMEDIA_TYPE_VIDEO) {
 
-    frame_term = xav_nif_frame_to_term(env, decoder->frame_data, decoder->frame_linesize, "rgb",
-                                       frame->width, frame->height, frame->pts);
+    frame_term = xav_nif_video_frame_to_term(env, frame, decoder->frame_data,
+                                             decoder->frame_linesize, "rgb");
 
   } else if (decoder->media_type == AVMEDIA_TYPE_AUDIO) {
     frame_term =

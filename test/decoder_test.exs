@@ -184,10 +184,11 @@ defmodule Xav.DecoderTest do
   end
 
   describe "decode/2" do
-    @tag :debug
     test "audio" do
       {:ok, decoder} = Xav.Decoder.new(:opus)
-      Xav.Decoder.decode(decoder, @opus_frame, 0, 0) |> dbg()
+
+      assert {:ok, %Xav.Frame{samples: 960, pts: 0, format: :flt}} =
+               Xav.Decoder.decode(decoder, @opus_frame, 0, 0)
     end
 
     test "video" do

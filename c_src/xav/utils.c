@@ -71,16 +71,16 @@ ERL_NIF_TERM xav_nif_raise(ErlNifEnv *env, char *msg) {
   return enif_raise_exception(env, reason);
 }
 
-ERL_NIF_TERM xav_nif_frame_to_term(ErlNifEnv *env, unsigned char *data[], int *linesize,
-                                   const char *format_name, int width, int height, int64_t pts) {
+ERL_NIF_TERM xav_nif_video_frame_to_term(ErlNifEnv *env, AVFrame *frame, unsigned char *data[],
+                                         int *linesize, const char *format_name) {
   ERL_NIF_TERM data_term;
-  unsigned char *ptr = enif_make_new_binary(env, linesize[0] * height, &data_term);
-  memcpy(ptr, data[0], linesize[0] * height);
+  unsigned char *ptr = enif_make_new_binary(env, linesize[0] * frame->height, &data_term);
+  memcpy(ptr, data[0], linesize[0] * frame->height);
 
   ERL_NIF_TERM format_term = enif_make_atom(env, format_name);
-  ERL_NIF_TERM height_term = enif_make_int(env, height);
-  ERL_NIF_TERM width_term = enif_make_int(env, width);
-  ERL_NIF_TERM pts_term = enif_make_int64(env, pts);
+  ERL_NIF_TERM height_term = enif_make_int(env, frame->height);
+  ERL_NIF_TERM width_term = enif_make_int(env, frame->width);
+  ERL_NIF_TERM pts_term = enif_make_int64(env, frame->pts);
   return enif_make_tuple(env, 5, data_term, format_term, width_term, height_term, pts_term);
 }
 
