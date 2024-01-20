@@ -1,5 +1,4 @@
 #include <erl_nif.h>
-// TODO revisit imports
 #include <libavcodec/avcodec.h>
 #include <libavdevice/avdevice.h>
 #include <libavformat/avformat.h>
@@ -21,6 +20,8 @@
 void print_supported_pix_fmts(AVCodec *codec);
 int init_swr_ctx_from_frame(SwrContext **swr_ctx, AVFrame *frame);
 void convert_to_rgb(AVFrame *src_frame, uint8_t *dst_data[], int dst_linesize[]);
+int convert_to_interleaved(SwrContext *swr_ctx, AVFrame *src_frame, uint8_t **dst_data,
+                           int *dst_linesize);
 
 ERL_NIF_TERM xav_nif_ok(ErlNifEnv *env, ERL_NIF_TERM data_term);
 ERL_NIF_TERM xav_nif_error(ErlNifEnv *env, char *reason);

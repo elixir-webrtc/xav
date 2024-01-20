@@ -1,4 +1,5 @@
 #include "decoder.h"
+#include "utils.h"
 
 int decoder_init(struct Decoder *decoder, const char *codec) {
   decoder->swr_ctx = NULL;
