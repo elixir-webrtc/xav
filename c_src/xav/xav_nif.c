@@ -186,10 +186,12 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   }
 
   av_frame_free(&frame);
+  av_packet_free(&pkt);
   return xav_nif_ok(env, frame_term);
 }
 
 void free_reader(ErlNifEnv *env, void *obj) {
+  XAV_LOG_DEBUG("Freeing Reader object");
   struct Reader *reader = (struct Reader *)obj;
   reader_free(reader);
 }
@@ -197,9 +199,7 @@ void free_reader(ErlNifEnv *env, void *obj) {
 void free_decoder(ErlNifEnv *env, void *obj) {
   XAV_LOG_DEBUG("Freeing Decoder object");
   struct Decoder *decoder = (struct Decoder *)obj;
-  if (decoder->c) {
-    avcodec_free_context(&decoder->c);
-  }
+  decoder_free(decoder);
 }
 
 static ErlNifFunc xav_funcs[] = {{"new_reader", 3, new_reader},

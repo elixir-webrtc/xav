@@ -80,3 +80,13 @@ int decoder_decode(struct Decoder *decoder, AVPacket *pkt, AVFrame *frame) {
 
   return 0;
 }
+
+void decoder_free(struct Decoder *decoder) {
+  if (decoder->swr_ctx != NULL) {
+    swr_free(&decoder->swr_ctx);
+  }
+
+  if (decoder->c != NULL) {
+    avcodec_free_context(&decoder->c);
+  }
+}
