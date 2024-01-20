@@ -188,14 +188,14 @@ defmodule Xav.DecoderTest do
       {:ok, decoder} = Xav.Decoder.new(:opus)
 
       assert {:ok, %Xav.Frame{samples: 960, pts: 0, format: :flt}} =
-               Xav.Decoder.decode(decoder, @opus_frame, 0, 0)
+               Xav.Decoder.decode(decoder, @opus_frame)
     end
 
     test "video" do
       {:ok, decoder} = Xav.Decoder.new(:vp8)
 
       assert {:ok, %Xav.Frame{width: 640, height: 480, pts: 0, format: :rgb}} =
-               Xav.Decoder.decode(decoder, @vp8_keyframe, 0, 0)
+               Xav.Decoder.decode(decoder, @vp8_keyframe)
     end
   end
 end

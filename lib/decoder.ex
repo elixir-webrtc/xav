@@ -24,8 +24,12 @@ defmodule Xav.Decoder do
   Video frames are always in the RGB format.
   Audio samples are always interleaved.
   """
-  @spec decode(t(), binary(), integer(), integer()) :: {:ok, Xav.Frame.t()} | {:error, atom()}
-  def decode(decoder, data, pts, dts) do
+  @spec decode(t(), binary(), pts: integer(), dts: integer()) ::
+          {:ok, Xav.Frame.t()} | {:error, atom()}
+  def decode(decoder, data, opts \\ []) do
+    pts = opts[:pts] || 0
+    dts = opts[:dts] || 0
+
     case Xav.NIF.decode(decoder, data, pts, dts) do
       {:ok, {data, format, width, height, pts}} ->
         {:ok, Xav.Frame.new(data, format, width, height, pts)}
