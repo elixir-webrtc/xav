@@ -174,10 +174,10 @@ defmodule Xav.DecoderTest do
                 104, 143>>
 
   test "new/0" do
-    assert {:ok, decoder} = Xav.Decoder.new(:vp8)
+    assert decoder = Xav.Decoder.new(:vp8)
     assert is_reference(decoder)
 
-    assert {:ok, decoder} = Xav.Decoder.new(:opus)
+    assert decoder = Xav.Decoder.new(:opus)
     assert is_reference(decoder)
 
     assert_raise(ErlangError, fn -> Xav.Decoder.new(:unknown) end)
@@ -185,14 +185,14 @@ defmodule Xav.DecoderTest do
 
   describe "decode/2" do
     test "audio" do
-      {:ok, decoder} = Xav.Decoder.new(:opus)
+      decoder = Xav.Decoder.new(:opus)
 
       assert {:ok, %Xav.Frame{samples: 960, pts: 0, format: :flt}} =
                Xav.Decoder.decode(decoder, @opus_frame)
     end
 
     test "video" do
-      {:ok, decoder} = Xav.Decoder.new(:vp8)
+      decoder = Xav.Decoder.new(:vp8)
 
       assert {:ok, %Xav.Frame{width: 640, height: 480, pts: 0, format: :rgb}} =
                Xav.Decoder.decode(decoder, @vp8_keyframe)

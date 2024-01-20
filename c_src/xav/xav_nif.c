@@ -127,7 +127,7 @@ ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   ERL_NIF_TERM decoder_term = enif_make_resource(env, decoder);
   enif_release_resource(decoder);
 
-  return xav_nif_ok(env, decoder_term);
+  return decoder_term;
 }
 
 ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
