@@ -110,13 +110,13 @@ ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   struct Decoder *decoder = enif_alloc_resource(decoder_resource_type, sizeof(struct Decoder));
 
   int codec_len;
-  if (!enif_get_atom_length(env, argv[0], &codec_len, ERL_NIF_UTF8)) {
+  if (!enif_get_atom_length(env, argv[0], &codec_len, ERL_NIF_LATIN1)) {
     return xav_nif_raise(env, "failed_to_get_atom_length");
   }
 
   char *codec = (char *)calloc(codec_len + 1, sizeof(char *));
 
-  if (enif_get_atom(env, argv[0], codec, codec_len + 1, ERL_NIF_UTF8) == 0) {
+  if (enif_get_atom(env, argv[0], codec, codec_len + 1, ERL_NIF_LATIN1) == 0) {
     return xav_nif_raise(env, "failed_to_get_atom");
   }
 
