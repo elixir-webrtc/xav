@@ -37,7 +37,7 @@ int decoder_decode(struct Decoder *decoder, AVPacket *pkt, AVFrame *frame) {
   int ret;
   ret = avcodec_send_packet(decoder->c, pkt);
   if (ret != 0) {
-    return -1;
+    return -2;
   }
 
   ret = avcodec_receive_frame(decoder->c, frame);

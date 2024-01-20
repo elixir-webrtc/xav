@@ -170,7 +170,10 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   pkt->pts = pts;
   pkt->dts = dts;
 
-  if (decoder_decode(decoder, pkt, frame) != 0) {
+  int ret = decoder_decode(decoder, pkt, frame);
+  if (ret == -2) {
+    return xav_nif_error(env, "no_keyframe");
+  } else if (ret != 0) {
     return xav_nif_raise(env, "failed_to_decode");
   }
 
