@@ -39,3 +39,14 @@ jobs:
       - run: sudo apt install libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libavdevice-dev
       - run: mix deps.get
       - run: mix test
+
+  test-macos:
+    runs-on: macos-latest
+    name: test-macos-x86-64 OTP latest / Elixir latest
+    env:
+      MIX_ENV: test
+    steps:
+      - uses: actions/checkout@v2
+      - run: brew install ffmpeg elixir
+      - run: mix deps.get
+      - run: mix test
