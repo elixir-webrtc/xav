@@ -14,7 +14,7 @@ Make sure you have installed FFMpeg (ver. 7.0) development packages on your syst
 ```elixir
 def deps do
   [
-    {:xav, "~> 0.3.0"}
+    {:xav, "~> 0.4.0"}
   ]
 end
 ```
