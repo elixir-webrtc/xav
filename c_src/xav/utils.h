@@ -29,4 +29,4 @@ ERL_NIF_TERM xav_nif_raise(ErlNifEnv *env, char *msg);
 ERL_NIF_TERM xav_nif_video_frame_to_term(ErlNifEnv *env, AVFrame *frame, unsigned char *data[],
                                          int *linesize, const char *out_format_name);
 ERL_NIF_TERM xav_nif_audio_frame_to_term(ErlNifEnv *env, AVFrame *frame, unsigned char *data[],
-                                         char *out_format_name);
+                                         const char *out_format_name);
