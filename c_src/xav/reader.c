@@ -1,5 +1,6 @@
 #include "reader.h"
 #include "utils.h"
+#include <libavutil/version.h>
 
 int reader_init(struct Reader *reader, char *path, size_t path_size, int device_flag,
                 enum AVMediaType media_type) {
@@ -70,8 +71,15 @@ int reader_init(struct Reader *reader, char *path, size_t path_size, int device_
   if (reader->media_type == AVMEDIA_TYPE_AUDIO) {
     reader->swr_ctx = swr_alloc();
     enum AVSampleFormat out_sample_fmt = av_get_alt_sample_fmt(reader->c->sample_fmt, 0);
+
+#if LIBAVUTIL_VERSION_MAJOR >= 58
     av_opt_set_chlayout(reader->swr_ctx, "in_chlayout", &reader->c->ch_layout, 0);
     av_opt_set_chlayout(reader->swr_ctx, "out_chlayout", &reader->c->ch_layout, 0);
+#else
+    av_opt_set_channel_layout(reader->swr_ctx, "in_channel_layout", reader->c->channel_layout, 0);
+    av_opt_set_channel_layout(reader->swr_ctx, "out_channel_layout", reader->c->channel_layout, 0);
+#endif
+
     av_opt_set_int(reader->swr_ctx, "in_sample_rate", reader->c->sample_rate, 0);
     av_opt_set_int(reader->swr_ctx, "out_sample_rate", reader->c->sample_rate, 0);
     av_opt_set_sample_fmt(reader->swr_ctx, "in_sample_fmt", reader->c->sample_fmt, 0);
@@ -202,8 +210,14 @@ fin:
     reader->frame_linesize = reader->frame->linesize;
   } else if (reader->media_type == AVMEDIA_TYPE_AUDIO &&
              av_sample_fmt_is_planar(reader->frame->format) == 1) {
+
     // convert to interleaved
+#if LIBAVUTIL_VERSION_MAJOR >= 58
     int channels = reader->frame->ch_layout.nb_channels;
+#else
+    int channels = reader->frame->channels;
+#endif
+
     int samples_per_channel = reader->frame->nb_samples;
 
     // reader->frame_data = (uint8_t**)malloc(sizeof(uint8_t *));

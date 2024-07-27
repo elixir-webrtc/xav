@@ -8,7 +8,7 @@ See an interview with FFmpeg enthusiast:  https://youtu.be/9kaIXkImCAM
 
 ## Installation
 
-Make sure you have installed FFMpeg (ver. 7.0) development packages on your system
+Make sure you have installed FFMpeg (ver. 5.x - 7.x) development packages on your system
 (see [here](INSTALL.md) for installation one-liners) and add Xav to the list of your dependencies:
 
 ```elixir
