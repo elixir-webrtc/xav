@@ -5,7 +5,7 @@ on: push
 jobs:
   lint:
     runs-on: ubuntu-latest
-    name: lint OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+    name: lint / ubuntu-latest / OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
     strategy:
       matrix:
         otp: ['25']
@@ -22,12 +22,13 @@ jobs:
       - run: mix docs 2>&1 | (! grep -q "warning:")
 
   test-linux:
-    runs-on: ubuntu-latest
-    name: test-linux-x86-64 OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
     strategy:
       matrix:
+        os: ['ubuntu-24.04', 'ubuntu-22.04']
         otp: ['25']
         elixir: ['1.14']
+    runs-on: ${{ matrix.os }}
+    name: test-linux-x86-64 / ${{ matrix.os }} / OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
     env:
       MIX_ENV: test
     steps:
@@ -41,8 +42,8 @@ jobs:
       - run: mix test
 
   test-macos:
-    runs-on: macos-latest
-    name: test-macos-x86-64 OTP latest / Elixir latest
+    runs-on: macos-13
+    name: test-macos-x86-64 / macos-13 / OTP latest / Elixir latest
     env:
       MIX_ENV: test
     steps:
@@ -50,3 +51,15 @@ jobs:
       - run: brew install ffmpeg elixir
       - run: mix deps.get
       - run: mix test
+  
+  test-macos-arm:
+    runs-on: macos-14
+    name: test-macos-arm / macos-14 / OTP latest / Elixir latest
+    env:
+      MIX_ENV: test
+    steps:
+      - uses: actions/checkout@v2
+      - run: brew install ffmpeg elixir
+      - run: mix deps.get
+      - run: mix test
+

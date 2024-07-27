@@ -13,16 +13,23 @@ XAV_SO = $(PRIV_DIR)/libxav.so
 HEADERS = $(XAV_DIR)/reader.h $(XAV_DIR)/decoder.h $(XAV_DIR)/utils.h
 SOURCES = $(XAV_DIR)/xav_nif.c $(XAV_DIR)/reader.c $(XAV_DIR)/decoder.c $(XAV_DIR)/utils.c
 
-CFLAGS = -fPIC -I$(ERTS_INCLUDE_DIR) -I${XAV_DIR} -shared $(XAV_DEBUG_LOGS)
+CFLAGS = $(XAV_DEBUG_LOGS) -fPIC -shared
+IFLAGS = -I$(ERTS_INCLUDE_DIR) -I$(XAV_DIR)
 LDFLAGS = -lavcodec -lswscale -lavutil -lavformat -lavdevice -lswresample
 
 ifeq ($(shell uname -s),Darwin)
-	CFLAGS += -undefined dynamic_lookup
+	ifeq ($(shell uname -m),arm64)
+		IFLAGS += $$(pkg-config --cflags-only-I libavcodec libswscale libavutil libavformat libavdevice libswresample)
+		LFLAGS += $$(pkg-config --libs-only-L libavcodec libswscale libavutil libavformat libavdevice libswresample)
+		CFLAGS += -undefined dynamic_lookup
+	else
+		CFLAGS += -undefined dynamic_lookup 
+	endif
 endif
 
 $(XAV_SO): Makefile $(SOURCES) $(HEADERS)
 	mkdir -p $(PRIV_DIR)
-	$(CC) $(CFLAGS) $(SOURCES) -o $(XAV_SO) $(LDFLAGS)
+	$(CC) $(CFLAGS) $(IFLAGS) $(LFLAGS) $(SOURCES) -o $(XAV_SO) $(LDFLAGS)
 
 format:
 	clang-format -i $(XAV_DIR)/*

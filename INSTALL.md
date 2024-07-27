@@ -13,10 +13,18 @@ dnf install ffmpeg-devel ffmpeg-libs
 apt install libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libavdevice-dev
 ```
 
-**MacOS**
+**MacOS x86_64**
 
 ```bash
 brew install ffmpeg
+```
+
+**MacOS arm64**
+
+On arm64, we use pkg-config to determine ffmpeg's include and lib directories.
+
+```bash
+brew install pkg-config ffmpeg
 ```
 
 **Windows**
