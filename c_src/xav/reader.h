@@ -41,7 +41,7 @@ struct Reader {
   int *frame_linesize;
 };
 
-int reader_init(struct Reader *reader, char *path, size_t path_size, int device_flag,
+int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, int device_flag,
                 enum AVMediaType media_type);
 
 int reader_next_frame(struct Reader *reader);

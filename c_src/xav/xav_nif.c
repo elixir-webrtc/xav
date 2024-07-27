@@ -109,7 +109,7 @@ ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
   struct Decoder *decoder = enif_alloc_resource(decoder_resource_type, sizeof(struct Decoder));
 
-  int codec_len;
+  unsigned int codec_len;
   if (!enif_get_atom_length(env, argv[0], &codec_len, ERL_NIF_LATIN1)) {
     return xav_nif_raise(env, "failed_to_get_atom_length");
   }

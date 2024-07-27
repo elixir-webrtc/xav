@@ -2,7 +2,7 @@
 #include "utils.h"
 #include <libavutil/version.h>
 
-int reader_init(struct Reader *reader, char *path, size_t path_size, int device_flag,
+int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, int device_flag,
                 enum AVMediaType media_type) {
   int ret;
   reader->path = XAV_ALLOC(path_size + 1);
