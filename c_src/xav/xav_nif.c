@@ -131,6 +131,8 @@ ERL_NIF_TERM new_decoder(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 }
 
 ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  ERL_NIF_TERM term;
+
   if (argc != 4) {
     return xav_nif_raise(env, "invalid_arg_count");
   }
@@ -172,9 +174,11 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
   int ret = decoder_decode(decoder, pkt, frame);
   if (ret == -2) {
-    return xav_nif_error(env, "no_keyframe");
+    term = xav_nif_error(env, "no_keyframe");
+    goto cleanup;
   } else if (ret != 0) {
-    return xav_nif_raise(env, "failed_to_decode");
+    term = xav_nif_raise(env, "failed_to_decode");
+    goto cleanup;
   }
 
   ERL_NIF_TERM frame_term;
@@ -188,9 +192,12 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
         xav_nif_audio_frame_to_term(env, frame, decoder->frame_data, decoder->out_format_name);
   }
 
+  term = xav_nif_ok(env, frame_term);
+
+cleanup:
   av_frame_free(&frame);
   av_packet_free(&pkt);
-  return xav_nif_ok(env, frame_term);
+  return term;
 }
 
 void free_reader(ErlNifEnv *env, void *obj) {
