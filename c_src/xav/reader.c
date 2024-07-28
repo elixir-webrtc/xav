@@ -192,17 +192,9 @@ int reader_next_frame(struct Reader *reader) {
   }
 
 fin:
-  // convert to rgb
   if (reader->media_type == AVMEDIA_TYPE_VIDEO && reader->frame->format != AV_PIX_FMT_RGB24) {
     XAV_LOG_DEBUG("Converting to RGB");
-    // clock_t begin = clock();
-
     convert_to_rgb(reader->frame, reader->rgb_dst_data, reader->rgb_dst_linesize);
-
-    // clock_t end = clock();
-    // double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-
-    // fprintf(stdout, "time swscale: %f\n", time_spent);
     reader->frame_data = reader->rgb_dst_data;
     reader->frame_linesize = reader->rgb_dst_linesize;
   } else if (reader->media_type == AVMEDIA_TYPE_VIDEO) {
@@ -210,29 +202,11 @@ fin:
     reader->frame_linesize = reader->frame->linesize;
   } else if (reader->media_type == AVMEDIA_TYPE_AUDIO &&
              av_sample_fmt_is_planar(reader->frame->format) == 1) {
+    XAV_LOG_DEBUG("Converting to interleaved");
 
-    // convert to interleaved
-#if LIBAVUTIL_VERSION_MAJOR >= 58
-    int channels = reader->frame->ch_layout.nb_channels;
-#else
-    int channels = reader->frame->channels;
-#endif
-
-    int samples_per_channel = reader->frame->nb_samples;
-
-    // reader->frame_data = (uint8_t**)malloc(sizeof(uint8_t *));
-    // reader->frame_data[0] = (uint8_t*)malloc(sizeof(uint8_t) *
-    // av_get_bytes_per_sample(out_sample_fmt) * samples_per_channel * channels);
-    ret = av_samples_alloc(&reader->rgb_dst_data[0], &reader->rgb_dst_linesize[0], channels,
-                           samples_per_channel, reader->frame->format, 0);
-    if (ret < 0) {
-      return ret;
-    }
-
-    ret = swr_convert(reader->swr_ctx, &reader->rgb_dst_data[0], samples_per_channel,
-                      (const uint8_t **)reader->frame->data, samples_per_channel);
-    if (ret < 0) {
-      return ret;
+    if (convert_to_interleaved(reader->swr_ctx, reader->frame, reader->rgb_dst_data,
+                               reader->rgb_dst_linesize) != 0) {
+      return -1;
     }
 
     reader->frame_data = reader->rgb_dst_data;
