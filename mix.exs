@@ -1,16 +1,39 @@
 defmodule Xav.MixProject do
   use Mix.Project
 
+  @version "0.4.0"
+  @source_url "https://github.com/elixir-webrtc/xav"
+
   def project do
     [
       app: :xav,
       version: "0.4.0",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
-      description: "Elixir media library built on top of FFmpeg",
+      description: "Elixir audio/video library built on top of FFmpeg",
       package: package(),
       compilers: [:elixir_make] ++ Mix.compilers(),
-      deps: deps()
+      deps: deps(),
+
+      # docs
+      docs: docs(),
+      source_url: @source_url,
+
+      # dialyzer
+      dialyzer: [
+        plt_local_path: "_dialyzer",
+        plt_core_path: "_dialyzer"
+      ],
+
+      # code coverage
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test,
+        "coveralls.json": :test
+      ]
     ]
   end
 
@@ -23,8 +46,8 @@ defmodule Xav.MixProject do
   defp package do
     [
       files: ~w(lib .formatter.exs mix.exs README* LICENSE* c_src Makefile),
-      licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/mickel8/xav"}
+      licenses: ["Apache-2.0"],
+      links: %{"GitHub" => "https://github.com/elixir-webrtc/xav"}
     ]
   end
 
@@ -32,9 +55,21 @@ defmodule Xav.MixProject do
     [
       {:nx, "~> 0.7.0"},
       {:elixir_make, "~> 0.7", runtime: false},
+
+      # dev/test
+      {:excoveralls, "~> 0.18.0", only: [:dev, :test], runtime: false},
       {:ex_doc, ">= 0.0.0", runtime: false, only: :dev},
       {:credo, ">= 0.0.0", runtime: false, only: :dev},
       {:dialyxir, ">= 0.0.0", runtime: false, only: :dev}
+    ]
+  end
+
+  defp docs do
+    [
+      main: "readme",
+      extras: ["README.md", "INSTALL.md"],
+      source_ref: "v#{@version}",
+      formatters: ["html"]
     ]
   end
 end

@@ -1,6 +1,6 @@
 defmodule Xav.Frame do
   @moduledoc """
-  Video or audio frame.
+  Audio/video frame.
   """
 
   @type t() :: %__MODULE__{
