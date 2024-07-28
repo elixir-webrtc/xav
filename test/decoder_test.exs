@@ -304,14 +304,14 @@ defmodule Xav.DecoderTest do
                Xav.Decoder.decode(decoder, @opus_frame)
     end
 
-    test "video" do
+    test "video keyframe" do
       decoder = Xav.Decoder.new(:vp8)
 
       assert {:ok, %Xav.Frame{width: 640, height: 480, pts: 0, format: :rgb}} =
                Xav.Decoder.decode(decoder, @vp8_keyframe)
     end
 
-    test "no keyframe" do
+    test "video without prior keyframe" do
       decoder = Xav.Decoder.new(:vp8)
 
       assert {:error, :no_keyframe} = Xav.Decoder.decode(decoder, @vp8_frame)

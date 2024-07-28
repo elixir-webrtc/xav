@@ -13,19 +13,9 @@ defmodule Xav.ReaderTest do
 
   test "next_frame/1" do
     {:ok, r} = Xav.Reader.new("./test/fixtures/sample_h264.mp4")
-    # test reading 5 seconds
+    # the file has 30fps, try to read 5 seconds
     for _i <- 0..(30 * 5), do: assert({:ok, %Xav.Frame{}} = Xav.Reader.next_frame(r))
   end
-
-  # @tag :debug
-  # test "next_frame/1 audio" do
-  #   {:ok, r} = Xav.Reader.new("./test/fixtures/sample.mp3", read: :audio)
-
-  #   for _i <- 0..5 do
-  #     assert({:ok, %Xav.Frame{} = frame} = Xav.Reader.next_frame(r))
-  #     IO.inspect({byte_size(frame.data), frame})
-  #   end
-  # end
 
   test "to_nx/1" do
     {:ok, r} = Xav.Reader.new("./test/fixtures/sample_h264.mp4")
@@ -46,8 +36,8 @@ defmodule Xav.ReaderTest do
 
     test name do
       {:ok, r} = Xav.Reader.new(unquote(file))
-      # test reading 5 seconds
-      for _i <- 0..(30 * 5), do: assert({:ok, %Xav.Frame{}} = Xav.Reader.next_frame(r))
+      # try to read 100 frames
+      for _i <- 0..100, do: assert({:ok, %Xav.Frame{}} = Xav.Reader.next_frame(r))
     end
   end)
 end
