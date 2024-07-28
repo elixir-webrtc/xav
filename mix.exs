@@ -57,6 +57,10 @@ defmodule Xav.MixProject do
       {:elixir_make, "~> 0.7", runtime: false},
 
       # dev/test
+      # bumblebee and exla for testing speech to text
+      {:bumblebee, "~> 0.5", only: :test},
+      {:exla, ">= 0.0.0", only: :test},
+      # other
       {:excoveralls, "~> 0.18.0", only: [:dev, :test], runtime: false},
       {:ex_doc, ">= 0.0.0", runtime: false, only: :dev},
       {:credo, ">= 0.0.0", runtime: false, only: :dev},
