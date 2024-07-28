@@ -16,19 +16,27 @@ jobs:
         with:
           otp-version: ${{matrix.otp}}
           elixir-version: ${{matrix.elixir}}
+      - run: sudo apt install libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libavdevice-dev
+      - name: Cache dialyzer artifacts
+        uses: actions/cache@v4
+        with:
+          path: _dialyzer
+          key: ${{ runner.os }}-dialyzer-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dialyzer-
       - run: mix deps.get
       - run: mix credo
       - run: mix format --check-formatted
+      - run: mix dialyzer
       - run: mix docs 2>&1 | (! grep -q "warning:")
 
   test-linux:
+    runs-on: ubuntu-22.04
+    name: test-linux-x86-64 / ubuntu-22.04 / OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
     strategy:
       matrix:
-        os: ['ubuntu-24.04', 'ubuntu-22.04']
         otp: ['25']
         elixir: ['1.14']
-    runs-on: ${{ matrix.os }}
-    name: test-linux-x86-64 / ${{ matrix.os }} / OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
     env:
       MIX_ENV: test
     steps:
@@ -40,6 +48,29 @@ jobs:
       - run: sudo apt install libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libavdevice-dev
       - run: mix deps.get
       - run: mix test
+
+  test-linux-coverage:
+    runs-on: ubuntu-24.04
+    name: test-linux-x86-64 / ubuntu-24.04 / OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+    strategy:
+      matrix:
+        otp: ['25']
+        elixir: ['1.14']
+    env:
+      MIX_ENV: test
+    steps:
+      - uses: actions/checkout@v2
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{matrix.otp}}
+          elixir-version: ${{matrix.elixir}}
+      - run: sudo apt install libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libavdevice-dev
+      - run: mix deps.get
+      - run: mix coveralls.json
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   test-macos:
     runs-on: macos-13

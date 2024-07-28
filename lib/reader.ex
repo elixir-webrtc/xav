@@ -1,6 +1,6 @@
 defmodule Xav.Reader do
   @moduledoc """
-  Audio/video files reader.
+  Audio/video file reader.
   """
 
   @typedoc """
@@ -40,7 +40,7 @@ defmodule Xav.Reader do
   Creates a new audio/video reader.
 
   Both reading from a file and from a video camera are supported.
-  In case of using a video camera, the v4l2 driver is required, and FPS are 
+  In case of using a video camera, the v4l2 driver is required, and FPS are
   locked to 10.
 
   Microphone input is not supported.
@@ -82,7 +82,7 @@ defmodule Xav.Reader do
   @doc """
   Reads the next frame.
 
-  A frame is always decoded. 
+  A frame is always decoded.
   Video frames are always in the RGB format.
   Audio samples are always interleaved.
   """
