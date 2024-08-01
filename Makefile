@@ -10,8 +10,8 @@ XAV_SO = $(PRIV_DIR)/libxav.so
 # uncomment to compile with debug logs
 # XAV_DEBUG_LOGS = -DXAV_DEBUG=1
 
-HEADERS = $(XAV_DIR)/reader.h $(XAV_DIR)/decoder.h $(XAV_DIR)/utils.h
-SOURCES = $(XAV_DIR)/xav_nif.c $(XAV_DIR)/reader.c $(XAV_DIR)/decoder.c $(XAV_DIR)/utils.c
+HEADERS = $(XAV_DIR)/reader.h $(XAV_DIR)/decoder.h $(XAV_DIR)/converter.h $(XAV_DIR)/utils.h
+SOURCES = $(XAV_DIR)/xav_nif.c $(XAV_DIR)/reader.c $(XAV_DIR)/decoder.c $(XAV_DIR)/converter.c $(XAV_DIR)/utils.c
 
 CFLAGS = $(XAV_DEBUG_LOGS) -fPIC -shared
 IFLAGS = -I$(ERTS_INCLUDE_DIR) -I$(XAV_DIR)

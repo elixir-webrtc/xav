@@ -20,13 +20,11 @@
 void print_supported_pix_fmts(AVCodec *codec);
 int init_swr_ctx_from_frame(SwrContext **swr_ctx, AVFrame *frame);
 void convert_to_rgb(AVFrame *src_frame, uint8_t *dst_data[], int dst_linesize[]);
-int convert_to_interleaved(SwrContext *swr_ctx, AVFrame *src_frame, uint8_t **dst_data,
-                           int *dst_linesize);
 
 ERL_NIF_TERM xav_nif_ok(ErlNifEnv *env, ERL_NIF_TERM data_term);
 ERL_NIF_TERM xav_nif_error(ErlNifEnv *env, char *reason);
 ERL_NIF_TERM xav_nif_raise(ErlNifEnv *env, char *msg);
 ERL_NIF_TERM xav_nif_video_frame_to_term(ErlNifEnv *env, AVFrame *frame, unsigned char *data[],
                                          int *linesize, const char *out_format_name);
-ERL_NIF_TERM xav_nif_audio_frame_to_term(ErlNifEnv *env, AVFrame *frame, unsigned char *data[],
-                                         const char *out_format_name);
+ERL_NIF_TERM xav_nif_audio_frame_to_term(ErlNifEnv *env, uint8_t **out_data, int out_samples,
+                                         int out_size, const char *out_format, int pts);

@@ -3,6 +3,7 @@
 
 int decoder_init(struct Decoder *decoder, const char *codec) {
   decoder->swr_ctx = NULL;
+  decoder->out_data = NULL;
 
   if (strcmp(codec, "opus") == 0) {
     decoder->media_type = AVMEDIA_TYPE_AUDIO;
@@ -28,6 +29,19 @@ int decoder_init(struct Decoder *decoder, const char *codec) {
 
   if (avcodec_open2(decoder->c, decoder->codec, NULL) < 0) {
     return -1;
+  }
+
+  if (decoder->media_type == AVMEDIA_TYPE_AUDIO) {
+    AVChannelLayout out_chlayout = decoder->c->ch_layout;
+    int out_sample_rate = decoder->c->sample_rate;
+    enum AVSampleFormat out_sample_fmt = AV_SAMPLE_FMT_FLT;
+
+    int ret = converter_init(&decoder->converter, decoder->c->ch_layout, decoder->c->sample_rate,
+                             decoder->c->sample_fmt, out_chlayout, out_sample_rate, out_sample_fmt);
+
+    if (ret < 0) {
+      return ret;
+    }
   }
 
   return 0;
@@ -59,23 +73,9 @@ int decoder_decode(struct Decoder *decoder, AVPacket *pkt, AVFrame *frame) {
       decoder->frame_data = frame->data;
       decoder->frame_linesize = frame->linesize;
     }
-  } else if (decoder->media_type == AVMEDIA_TYPE_AUDIO &&
-             av_sample_fmt_is_planar(frame->format) == 1) {
-    if (decoder->swr_ctx == NULL) {
-      if (init_swr_ctx_from_frame(&decoder->swr_ctx, frame) != 0) {
-        return -1;
-      }
-    }
-
-    if (convert_to_interleaved(decoder->swr_ctx, frame, decoder->rgb_dst_data,
-                               decoder->rgb_dst_linesize) != 0) {
-      return -1;
-    }
-
-    decoder->frame_data = decoder->rgb_dst_data;
-    decoder->frame_linesize = decoder->rgb_dst_linesize;
-  } else {
-    decoder->frame_data = frame->extended_data;
+  } else if (decoder->media_type == AVMEDIA_TYPE_AUDIO) {
+    return converter_convert(&decoder->converter, frame, &decoder->out_data, &decoder->out_samples,
+                             &decoder->out_size);
   }
 
   return 0;

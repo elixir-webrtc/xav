@@ -8,8 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
+#include "converter.h"
 #include "utils.h"
 
 struct Reader {
@@ -39,6 +39,16 @@ struct Reader {
   // whether convertion to rgb was needed
   uint8_t **frame_data;
   int *frame_linesize;
+
+  struct Converter converter;
+  // Buffer where audio samples are written after conversion.
+  // We always convet to packed format, so only out_data[0] is set.
+  uint8_t **out_data;
+  // Number of samples in out_data buffer
+  int out_samples;
+  // Size of out_data buffer.
+  // This is the same as out_samples * bytes_per_sample(out_format) * out_channels.
+  int out_size;
 };
 
 int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, int device_flag,
