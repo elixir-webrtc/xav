@@ -93,7 +93,7 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     frame_term = xav_nif_video_frame_to_term(env, reader->frame, reader->frame_data,
                                              reader->frame_linesize, reader->out_format_name);
   } else if (reader->media_type == AVMEDIA_TYPE_AUDIO) {
-    const char *out_format = av_get_sample_fmt_name(reader->converter.out_sample_fmt);
+    const char *out_format = av_get_sample_fmt_name(reader->converter->out_sample_fmt);
 
     frame_term = xav_nif_audio_frame_to_term(env, reader->out_data, reader->out_samples,
                                              reader->out_size, out_format, reader->frame->pts);
@@ -190,7 +190,7 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
                                              decoder->frame_linesize, "rgb");
 
   } else if (decoder->media_type == AVMEDIA_TYPE_AUDIO) {
-    const char *out_format = av_get_sample_fmt_name(decoder->converter.out_sample_fmt);
+    const char *out_format = av_get_sample_fmt_name(decoder->converter->out_sample_fmt);
 
     frame_term = xav_nif_audio_frame_to_term(env, decoder->out_data, decoder->out_samples,
                                              decoder->out_size, out_format, frame->pts);
@@ -204,6 +204,7 @@ cleanup:
 
   if (decoder->out_data != NULL) {
     free(decoder->out_data);
+    decoder->out_data = NULL;
   }
 
   return term;

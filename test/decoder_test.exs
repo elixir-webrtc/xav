@@ -1,5 +1,5 @@
 defmodule Xav.DecoderTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   @vp8_keyframe <<80, 188, 0, 157, 1, 42, 128, 2, 224, 1, 57, 107, 0, 47, 28, 34, 22, 22, 34, 102,
                   18, 32, 212, 14, 239, 198, 191, 249, 103, 67, 12, 209, 59, 136, 119, 231, 148,

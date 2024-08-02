@@ -3,6 +3,10 @@
 #include <libavutil/samplefmt.h>
 #include <libavutil/version.h>
 
+#include <inttypes.h>
+
+static int init_converter(struct Reader *reader);
+
 int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, int device_flag,
                 enum AVMediaType media_type) {
   int ret;
@@ -23,6 +27,7 @@ int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, in
   reader->in_format_name = NULL;
   reader->out_format_name = NULL;
   reader->out_data = NULL;
+  reader->converter = NULL;
 
   if (device_flag == 1) {
     avdevice_register_all();
@@ -71,19 +76,8 @@ int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, in
   }
 
   if (reader->media_type == AVMEDIA_TYPE_AUDIO) {
-    AVChannelLayout out_chlayout = AV_CHANNEL_LAYOUT_MONO;
-    int out_sample_rate = 16000;
-    enum AVSampleFormat out_sample_fmt = AV_SAMPLE_FMT_FLT;
-
-    int ret = converter_init(&reader->converter, reader->c->ch_layout, reader->c->sample_rate,
-                             reader->c->sample_fmt, out_chlayout, out_sample_rate, out_sample_fmt);
-
-    if (ret < 0) {
-      return ret;
-    }
-
-    reader->in_format_name = av_get_sample_fmt_name(reader->c->sample_fmt);
-    reader->out_format_name = av_get_sample_fmt_name(out_sample_fmt);
+    reader->in_format_name = "rgb";
+    reader->out_format_name = "rgb";
   } else {
     reader->in_format_name = av_get_pix_fmt_name(reader->c->pix_fmt);
     reader->out_format_name = "rgb";
@@ -193,7 +187,16 @@ fin:
     reader->frame_linesize = reader->frame->linesize;
   } else if (reader->media_type == AVMEDIA_TYPE_AUDIO) {
     XAV_LOG_DEBUG("Converting audio to desired out format");
-    return converter_convert(&reader->converter, reader->frame, &reader->out_data,
+
+    if (reader->converter == NULL) {
+      XAV_LOG_DEBUG("Converter not initialized. Initializing.");
+      ret = init_converter(reader);
+      if (ret < 0) {
+        return ret;
+      }
+    }
+
+    return converter_convert(reader->converter, reader->frame, &reader->out_data,
                              &reader->out_samples, &reader->out_size);
   }
 
@@ -211,6 +214,7 @@ void reader_free_frame(struct Reader *reader) {
 
   if (reader->out_data != NULL) {
     free(reader->out_data);
+    reader->out_data = NULL;
   }
 }
 
@@ -224,4 +228,35 @@ void reader_free(struct Reader *reader) {
   av_frame_free(&reader->frame);
   avformat_close_input(&reader->fmt_ctx);
   XAV_FREE(reader->path);
+}
+
+static int init_converter(struct Reader *reader) {
+  reader->converter = (struct Converter *)calloc(1, sizeof(struct Converter));
+  int out_sample_rate = 16000;
+  enum AVSampleFormat out_sample_fmt = AV_SAMPLE_FMT_FLT;
+
+  struct ChannelLayout in_chlayout, out_chlayout;
+#if LIBAVUTIL_VERSION_MAJOR >= 58
+  in_chlayout.layout = reader->c->ch_layout;
+  av_channel_layout_from_mask(&out_chlayout.layout, AV_CH_LAYOUT_MONO);
+#else
+  in_chlayout.layout = reader->frame->channel_layout;
+  out_chlayout.layout = AV_CH_LAYOUT_MONO;
+
+  if (reader->frame->channel_layout == 0 && reader->frame->channels > 0) {
+    // In newer FFmpeg versions, 0 means that the order of channels is
+    // unspecified but there still might be information about channels number.
+    // Let's check againts it and take default channel order for the given channels number.
+    // This is also what newer FFmpeg versions do under the hood when passing
+    // unspecified channel order.
+    in_chlayout.layout = av_get_default_channel_layout(reader->frame->channels);
+  } else if (reader->frame->channel_layout == 0) {
+    XAV_LOG_DEBUG("Both channel layout and channels are unset. Cannot init converter.");
+    return -1;
+  }
+
+#endif
+
+  return converter_init(reader->converter, in_chlayout, reader->c->sample_rate,
+                        reader->c->sample_fmt, out_chlayout, out_sample_rate, out_sample_fmt);
 }

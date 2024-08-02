@@ -1,8 +1,11 @@
 #include "decoder.h"
 #include "utils.h"
 
+static int init_converter(struct Decoder *decoder);
+
 int decoder_init(struct Decoder *decoder, const char *codec) {
   decoder->swr_ctx = NULL;
+  decoder->converter = NULL;
   decoder->out_data = NULL;
 
   if (strcmp(codec, "opus") == 0) {
@@ -29,19 +32,6 @@ int decoder_init(struct Decoder *decoder, const char *codec) {
 
   if (avcodec_open2(decoder->c, decoder->codec, NULL) < 0) {
     return -1;
-  }
-
-  if (decoder->media_type == AVMEDIA_TYPE_AUDIO) {
-    AVChannelLayout out_chlayout = decoder->c->ch_layout;
-    int out_sample_rate = decoder->c->sample_rate;
-    enum AVSampleFormat out_sample_fmt = AV_SAMPLE_FMT_FLT;
-
-    int ret = converter_init(&decoder->converter, decoder->c->ch_layout, decoder->c->sample_rate,
-                             decoder->c->sample_fmt, out_chlayout, out_sample_rate, out_sample_fmt);
-
-    if (ret < 0) {
-      return ret;
-    }
   }
 
   return 0;
@@ -74,7 +64,15 @@ int decoder_decode(struct Decoder *decoder, AVPacket *pkt, AVFrame *frame) {
       decoder->frame_linesize = frame->linesize;
     }
   } else if (decoder->media_type == AVMEDIA_TYPE_AUDIO) {
-    return converter_convert(&decoder->converter, frame, &decoder->out_data, &decoder->out_samples,
+
+    if (decoder->converter == NULL) {
+      ret = init_converter(decoder);
+      if (ret < 0) {
+        return ret;
+      }
+    }
+
+    return converter_convert(decoder->converter, frame, &decoder->out_data, &decoder->out_samples,
                              &decoder->out_size);
   }
 
@@ -89,4 +87,24 @@ void decoder_free(struct Decoder *decoder) {
   if (decoder->c != NULL) {
     avcodec_free_context(&decoder->c);
   }
+}
+
+static int init_converter(struct Decoder *decoder) {
+  decoder->converter = (struct Converter *)calloc(1, sizeof(struct Converter));
+  int out_sample_rate = decoder->c->sample_rate;
+  enum AVSampleFormat out_sample_fmt = AV_SAMPLE_FMT_FLT;
+
+  struct ChannelLayout in_chlayout, out_chlayout;
+#if LIBAVUTIL_VERSION_MAJOR >= 58
+  in_chlayout.layout = decoder->c->ch_layout;
+  out_chlayout.layout = decoder->c->ch_layout;
+#else
+  in_chlayout.layout = decoder->c->channel_layout;
+  out_chlayout.layout = decoder->c->channel_layout;
+  XAV_LOG_DEBUG("in_chlayout %ld", in_chlayout.layout);
+  XAV_LOG_DEBUG("in nb_channels %d", av_get_channel_layout_nb_channels(in_chlayout.layout));
+#endif
+
+  return converter_init(decoder->converter, in_chlayout, decoder->c->sample_rate,
+                        decoder->c->sample_fmt, out_chlayout, out_sample_rate, out_sample_fmt);
 }

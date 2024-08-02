@@ -18,7 +18,6 @@
 #define XAV_FREE(X) enif_free(X)
 
 void print_supported_pix_fmts(AVCodec *codec);
-int init_swr_ctx_from_frame(SwrContext **swr_ctx, AVFrame *frame);
 void convert_to_rgb(AVFrame *src_frame, uint8_t *dst_data[], int dst_linesize[]);
 
 ERL_NIF_TERM xav_nif_ok(ErlNifEnv *env, ERL_NIF_TERM data_term);

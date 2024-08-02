@@ -13,26 +13,6 @@ void print_supported_pix_fmts(AVCodec *codec) {
   }
 }
 
-int init_swr_ctx_from_frame(SwrContext **swr_ctx, AVFrame *frame) {
-  *swr_ctx = swr_alloc();
-  enum AVSampleFormat out_sample_fmt = av_get_alt_sample_fmt(frame->format, 0);
-
-#if LIBAVUTIL_VERSION_MAJOR >= 58
-  av_opt_set_chlayout(*swr_ctx, "in_chlayout", &frame->ch_layout, 0);
-  av_opt_set_chlayout(*swr_ctx, "out_chlayout", &frame->ch_layout, 0);
-#else
-  av_opt_set_channel_layout(*swr_ctx, "in_channel_layout", frame->channel_layout, 0);
-  av_opt_set_channel_layout(*swr_ctx, "out_channel_layout", frame->channel_layout, 0);
-#endif
-
-  av_opt_set_int(*swr_ctx, "in_sample_rate", frame->sample_rate, 0);
-  av_opt_set_int(*swr_ctx, "out_sample_rate", frame->sample_rate, 0);
-  av_opt_set_sample_fmt(*swr_ctx, "in_sample_fmt", frame->format, 0);
-  av_opt_set_sample_fmt(*swr_ctx, "out_sample_fmt", out_sample_fmt, 0);
-
-  return swr_init(*swr_ctx);
-}
-
 void convert_to_rgb(AVFrame *src_frame, uint8_t *dst_data[], int dst_linesize[]) {
   struct SwsContext *sws_ctx =
       sws_getContext(src_frame->width, src_frame->height, src_frame->format, src_frame->width,

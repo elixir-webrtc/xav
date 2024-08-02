@@ -40,7 +40,7 @@ struct Reader {
   uint8_t **frame_data;
   int *frame_linesize;
 
-  struct Converter converter;
+  struct Converter *converter;
   // Buffer where audio samples are written after conversion.
   // We always convet to packed format, so only out_data[0] is set.
   uint8_t **out_data;
