@@ -77,6 +77,11 @@ jobs:
     name: test-macos-x86-64 / macos-13 / OTP latest / Elixir latest
     env:
       MIX_ENV: test
+      # MacOS runners seem to have static IP addresses
+      # which results in GitHub rate limiting our requests
+      # for downloading prebuilt XLA binaries.
+      # Adding token seems to help.
+      XLA_HTTP_HEADERS: "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}"
     steps:
       - uses: actions/checkout@v2
       - run: brew install ffmpeg elixir
@@ -88,6 +93,7 @@ jobs:
     name: test-macos-arm / macos-14 / OTP latest / Elixir latest
     env:
       MIX_ENV: test
+      XLA_HTTP_HEADERS: "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}"
     steps:
       - uses: actions/checkout@v2
       - run: brew install ffmpeg elixir

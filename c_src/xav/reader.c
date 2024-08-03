@@ -249,6 +249,8 @@ static int init_converter(struct Reader *reader) {
     // Let's check againts it and take default channel order for the given channels number.
     // This is also what newer FFmpeg versions do under the hood when passing
     // unspecified channel order.
+    XAV_LOG_DEBUG("Channel layout unset. Setting to default for channels number: %d",
+                  reader->frame->channels);
     in_chlayout.layout = av_get_default_channel_layout(reader->frame->channels);
   } else if (reader->frame->channel_layout == 0) {
     XAV_LOG_DEBUG("Both channel layout and channels are unset. Cannot init converter.");
