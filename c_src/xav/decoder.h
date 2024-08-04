@@ -6,9 +6,10 @@
 
 struct Decoder {
   enum AVMediaType media_type;
+  AVFrame *frame;
+  AVPacket *pkt;
   const AVCodec *codec;
   AVCodecContext *c;
-  SwrContext *swr_ctx;
 
   const char *out_format_name;
 
@@ -29,8 +30,12 @@ struct Decoder {
   int out_size;
 };
 
+struct Decoder *decoder_alloc();
+
 int decoder_init(struct Decoder *decoder, const char *codec);
 
 int decoder_decode(struct Decoder *decoder, AVPacket *pkt, AVFrame *frame);
 
-void decoder_free(struct Decoder *decoder);
+void decoder_free_frame(struct Decoder *decoder);
+
+void decoder_free(struct Decoder **decoder);

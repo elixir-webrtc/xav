@@ -7,6 +7,31 @@
 
 static int init_converter(struct Reader *reader);
 
+struct Reader *reader_alloc() {
+
+  struct Reader *reader = (struct Reader *)XAV_ALLOC(sizeof(struct Reader));
+
+  reader->path = NULL;
+  reader->frame = NULL;
+  reader->pkt = NULL;
+  reader->codec = NULL;
+  reader->c = NULL;
+  reader->fmt_ctx = NULL;
+  reader->input_format = NULL;
+  reader->options = NULL;
+  reader->in_format_name = NULL;
+  reader->out_format_name = NULL;
+  reader->frame_data = NULL;
+  reader->frame_linesize = NULL;
+  for (int i = 0; i < 4; i++) {
+    reader->rgb_dst_data[i] = NULL;
+  }
+  reader->converter = NULL;
+  reader->out_data = NULL;
+
+  return reader;
+}
+
 int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, int device_flag,
                 enum AVMediaType media_type) {
   int ret;
@@ -14,20 +39,7 @@ int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, in
   memcpy(reader->path, path, path_size);
   reader->path[path_size] = '\0';
 
-  // TODO which of those are really needed?
-  reader->fmt_ctx = NULL;
-  reader->codec = NULL;
-  reader->c = NULL;
-  reader->frame = NULL;
-  reader->pkt = NULL;
-  reader->input_format = NULL;
-  reader->options = NULL;
-  reader->swr_ctx = NULL;
   reader->media_type = media_type;
-  reader->in_format_name = NULL;
-  reader->out_format_name = NULL;
-  reader->out_data = NULL;
-  reader->converter = NULL;
 
   if (device_flag == 1) {
     avdevice_register_all();
@@ -205,6 +217,7 @@ fin:
 
 void reader_free_frame(struct Reader *reader) {
   av_frame_unref(reader->frame);
+
   if (reader->media_type == AVMEDIA_TYPE_AUDIO && reader->frame_data == reader->rgb_dst_data) {
     av_freep(&reader->frame_data[0]);
   } else if (reader->media_type == AVMEDIA_TYPE_VIDEO &&
@@ -213,25 +226,48 @@ void reader_free_frame(struct Reader *reader) {
   }
 
   if (reader->out_data != NULL) {
-    free(reader->out_data);
-    reader->out_data = NULL;
+    av_freep(&reader->out_data);
   }
 }
 
-void reader_free(struct Reader *reader) {
+void reader_free(struct Reader **reader) {
   XAV_LOG_DEBUG("Freeing Reader object");
-  if (reader->swr_ctx != NULL) {
-    swr_free(&reader->swr_ctx);
+  if (*reader != NULL) {
+    struct Reader *r = *reader;
+
+    if (r->c != NULL) {
+      avcodec_free_context(&r->c);
+    }
+
+    if (r->pkt != NULL) {
+      av_packet_free(&r->pkt);
+    }
+
+    if (r->frame != NULL) {
+      av_frame_free(&r->frame);
+    }
+
+    if (r->fmt_ctx != NULL) {
+      avformat_close_input(&r->fmt_ctx);
+    }
+
+    if (r->path != NULL) {
+      XAV_FREE(r->path);
+    }
+
+    XAV_FREE(r);
+    *reader = NULL;
   }
-  avcodec_free_context(&reader->c);
-  av_packet_free(&reader->pkt);
-  av_frame_free(&reader->frame);
-  avformat_close_input(&reader->fmt_ctx);
-  XAV_FREE(reader->path);
 }
 
 static int init_converter(struct Reader *reader) {
-  reader->converter = (struct Converter *)calloc(1, sizeof(struct Converter));
+  reader->converter = converter_alloc();
+
+  if (reader->converter == NULL) {
+    XAV_LOG_DEBUG("Couldn't allocate converter");
+    return -1;
+  }
+
   int out_sample_rate = 16000;
   enum AVSampleFormat out_sample_fmt = AV_SAMPLE_FMT_FLT;
 

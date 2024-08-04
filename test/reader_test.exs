@@ -6,12 +6,12 @@ defmodule Xav.ReaderTest do
     assert {:error, _reason} = Xav.Reader.new("non_existing_input")
   end
 
-  @tag :debug
   test "new!/1" do
     %Xav.Reader{} = Xav.Reader.new!("./test/fixtures/sample_h264.mp4")
     assert_raise RuntimeError, fn -> Xav.Reader.new!("non_existing_input") end
   end
 
+  @tag :debug
   test "next_frame/1" do
     {:ok, r} = Xav.Reader.new("./test/fixtures/sample_h264.mp4")
     # the file has 30fps, try to read 5 seconds

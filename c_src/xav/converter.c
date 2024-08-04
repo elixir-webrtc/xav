@@ -1,4 +1,3 @@
-#include "converter.h"
 #include <libavutil/channel_layout.h>
 #include <libavutil/opt.h>
 #include <libavutil/samplefmt.h>
@@ -6,7 +5,14 @@
 #include <stdint.h>
 
 #include "channel_layout.h"
+#include "converter.h"
 #include "utils.h"
+
+struct Converter *converter_alloc() {
+  struct Converter *converter = (struct Converter *)XAV_ALLOC(sizeof(struct Converter));
+  converter->swr_ctx = NULL;
+  return converter;
+}
 
 int converter_init(struct Converter *c, struct ChannelLayout in_chlayout, int in_sample_rate,
                    enum AVSampleFormat in_sample_fmt, struct ChannelLayout out_chlayout,
@@ -76,4 +82,15 @@ int converter_convert(struct Converter *c, AVFrame *src_frame, uint8_t ***out_da
   return 0;
 }
 
-void converter_free(struct Converter *c) { swr_free(&c->swr_ctx); }
+void converter_free(struct Converter **converter) {
+  if (*converter != NULL) {
+    struct Converter *c = *converter;
+
+    if (c->swr_ctx != NULL) {
+      swr_free(&c->swr_ctx);
+    }
+
+    XAV_FREE(c);
+    *converter = NULL;
+  }
+}

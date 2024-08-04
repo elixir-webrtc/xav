@@ -12,7 +12,7 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "failed_to_get_atom_length");
   }
 
-  char *codec = (char *)calloc(codec_len + 1, sizeof(char *));
+  char *codec = (char *)XAV_ALLOC((codec_len + 1) * sizeof(char *));
 
   if (enif_get_atom(env, argv[0], codec, codec_len + 1, ERL_NIF_LATIN1) == 0) {
     return xav_nif_raise(env, "failed_to_get_atom");
@@ -23,7 +23,10 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   xav_decoder->decoder = NULL;
   xav_decoder->converter = NULL;
 
-  xav_decoder->decoder = (struct Decoder *)calloc(1, sizeof(struct Decoder));
+  xav_decoder->decoder = decoder_alloc();
+  if (xav_decoder->decoder == NULL) {
+    return xav_nif_raise(env, "failed_to_allocate_decoder");
+  }
 
   if (decoder_init(xav_decoder->decoder, codec) != 0) {
     return xav_nif_raise(env, "failed_to_init_decoder");
@@ -36,8 +39,6 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 }
 
 ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  ERL_NIF_TERM term;
-
   if (argc != 4) {
     return xav_nif_raise(env, "invalid_arg_count");
   }
@@ -62,34 +63,24 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "couldnt_get_int");
   }
 
-  AVPacket *pkt = av_packet_alloc();
-  if (!pkt) {
-    return xav_nif_raise(env, "couldnt_alloc_av_packet");
-  }
+  xav_decoder->decoder->pkt->data = data.data;
+  xav_decoder->decoder->pkt->size = data.size;
+  xav_decoder->decoder->pkt->pts = pts;
+  xav_decoder->decoder->pkt->dts = dts;
 
-  AVFrame *frame = av_frame_alloc();
-  if (!frame) {
-    return xav_nif_raise(env, "couldnt_alloc_frame");
-  }
-
-  pkt->data = data.data;
-  pkt->size = data.size;
-  pkt->pts = pts;
-  pkt->dts = dts;
-
-  int ret = decoder_decode(xav_decoder->decoder, pkt, frame);
+  int ret =
+      decoder_decode(xav_decoder->decoder, xav_decoder->decoder->pkt, xav_decoder->decoder->frame);
   if (ret == -2) {
-    term = xav_nif_error(env, "no_keyframe");
-    goto cleanup;
+    return xav_nif_error(env, "no_keyframe");
   } else if (ret != 0) {
-    term = xav_nif_raise(env, "failed_to_decode");
-    goto cleanup;
+    return xav_nif_raise(env, "failed_to_decode");
   }
 
   ERL_NIF_TERM frame_term;
   if (xav_decoder->decoder->media_type == AVMEDIA_TYPE_VIDEO) {
 
-    frame_term = xav_nif_video_frame_to_term(env, frame, xav_decoder->decoder->frame_data,
+    frame_term = xav_nif_video_frame_to_term(env, xav_decoder->decoder->frame,
+                                             xav_decoder->decoder->frame_data,
                                              xav_decoder->decoder->frame_linesize, "rgb");
 
   } else if (xav_decoder->decoder->media_type == AVMEDIA_TYPE_AUDIO) {
@@ -98,32 +89,24 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
     frame_term = xav_nif_audio_frame_to_term(
         env, xav_decoder->decoder->out_data, xav_decoder->decoder->out_samples,
-        xav_decoder->decoder->out_size, out_format, frame->pts);
+        xav_decoder->decoder->out_size, out_format, xav_decoder->decoder->frame->pts);
   }
 
-  term = xav_nif_ok(env, frame_term);
+  decoder_free_frame(xav_decoder->decoder);
 
-cleanup:
-  av_frame_free(&frame);
-  av_packet_free(&pkt);
-
-  if (xav_decoder->decoder->out_data != NULL) {
-    free(xav_decoder->decoder->out_data);
-    xav_decoder->decoder->out_data = NULL;
-  }
-
-  return term;
+  return xav_nif_ok(env, frame_term);
+  ;
 }
 
 void free_xav_decoder(ErlNifEnv *env, void *obj) {
   XAV_LOG_DEBUG("Freeing XavDecoder object");
   struct XavDecoder *xav_decoder = (struct XavDecoder *)obj;
   if (xav_decoder->decoder != NULL) {
-    decoder_free(xav_decoder->decoder);
+    decoder_free(&xav_decoder->decoder);
   }
 
   if (xav_decoder->converter != NULL) {
-    converter_free(xav_decoder->converter);
+    converter_free(&xav_decoder->converter);
   }
 }
 

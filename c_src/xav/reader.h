@@ -23,7 +23,6 @@ struct Reader {
   const AVInputFormat *input_format;
   AVDictionary *options;
   enum AVMediaType media_type;
-  SwrContext *swr_ctx;
 
   const char *in_format_name;
   const char *out_format_name;
@@ -51,6 +50,8 @@ struct Reader {
   int out_size;
 };
 
+struct Reader *reader_alloc();
+
 int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, int device_flag,
                 enum AVMediaType media_type);
 
@@ -58,4 +59,4 @@ int reader_next_frame(struct Reader *reader);
 
 void reader_free_frame(struct Reader *reader);
 
-void reader_free(struct Reader *reader);
+void reader_free(struct Reader **reader);

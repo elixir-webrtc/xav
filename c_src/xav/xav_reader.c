@@ -34,7 +34,11 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   xav_reader->reader = NULL;
   xav_reader->converter = NULL;
 
-  xav_reader->reader = (struct Reader *)calloc(1, sizeof(struct Reader));
+  xav_reader->reader = reader_alloc();
+  if (xav_reader->reader == NULL) {
+    return xav_nif_raise(env, "couldnt_allocate_reader");
+  }
+
   int ret = reader_init(xav_reader->reader, bin.data, bin.size, device_flag, media_type);
 
   if (ret == -1) {
@@ -112,11 +116,11 @@ void free_xav_reader(ErlNifEnv *env, void *obj) {
   XAV_LOG_DEBUG("Freeing XavReader object");
   struct XavReader *xav_reader = (struct XavReader *)obj;
   if (xav_reader->reader != NULL) {
-    reader_free(xav_reader->reader);
+    reader_free(&xav_reader->reader);
   }
 
   if (xav_reader->converter != NULL) {
-    converter_free(xav_reader->converter);
+    converter_free(&xav_reader->converter);
   }
 }
 

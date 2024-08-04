@@ -3,11 +3,26 @@
 
 static int init_converter(struct Decoder *decoder);
 
-int decoder_init(struct Decoder *decoder, const char *codec) {
-  decoder->swr_ctx = NULL;
+struct Decoder *decoder_alloc() {
+  struct Decoder *decoder = (struct Decoder *)XAV_ALLOC(sizeof(struct Decoder));
+
+  decoder->codec = NULL;
+  decoder->c = NULL;
+  decoder->out_format_name = NULL;
+
+  for (int i = 0; i < 4; i++) {
+    decoder->rgb_dst_data[i] = NULL;
+  }
+
+  decoder->frame_data = NULL;
+  decoder->frame_linesize = NULL;
   decoder->converter = NULL;
   decoder->out_data = NULL;
 
+  return decoder;
+}
+
+int decoder_init(struct Decoder *decoder, const char *codec) {
   if (strcmp(codec, "opus") == 0) {
     decoder->media_type = AVMEDIA_TYPE_AUDIO;
     decoder->codec = avcodec_find_decoder(AV_CODEC_ID_OPUS);
@@ -27,6 +42,16 @@ int decoder_init(struct Decoder *decoder, const char *codec) {
 
   decoder->c = avcodec_alloc_context3(decoder->codec);
   if (!decoder->c) {
+    return -1;
+  }
+
+  decoder->frame = av_frame_alloc();
+  if (!decoder->frame) {
+    return -1;
+  }
+
+  decoder->pkt = av_packet_alloc();
+  if (!decoder->pkt) {
     return -1;
   }
 
@@ -79,18 +104,54 @@ int decoder_decode(struct Decoder *decoder, AVPacket *pkt, AVFrame *frame) {
   return 0;
 }
 
-void decoder_free(struct Decoder *decoder) {
-  if (decoder->swr_ctx != NULL) {
-    swr_free(&decoder->swr_ctx);
+void decoder_free_frame(struct Decoder *decoder) {
+  // TODO revisit this
+  av_frame_unref(decoder->frame);
+  av_packet_unref(decoder->pkt);
+
+  if (decoder->media_type == AVMEDIA_TYPE_AUDIO && decoder->frame_data == decoder->rgb_dst_data) {
+    av_freep(&decoder->frame_data[0]);
+  } else if (decoder->media_type == AVMEDIA_TYPE_VIDEO &&
+             decoder->frame_data == decoder->rgb_dst_data) {
+    av_freep(&decoder->frame_data[0]);
   }
 
-  if (decoder->c != NULL) {
-    avcodec_free_context(&decoder->c);
+  if (decoder->out_data != NULL) {
+    // av_freep sets pointer to NULL
+    av_freep(&decoder->out_data);
+  }
+}
+
+void decoder_free(struct Decoder **decoder) {
+  XAV_LOG_DEBUG("Freeing Decoder object");
+  if (*decoder != NULL) {
+    struct Decoder *d = *decoder;
+
+    if (d->c != NULL) {
+      avcodec_free_context(&d->c);
+    }
+
+    if (d->pkt != NULL) {
+      av_packet_free(&d->pkt);
+    }
+
+    if (d->frame != NULL) {
+      av_frame_free(&d->frame);
+    }
+
+    XAV_FREE(d);
+    *decoder = NULL;
   }
 }
 
 static int init_converter(struct Decoder *decoder) {
-  decoder->converter = (struct Converter *)calloc(1, sizeof(struct Converter));
+  decoder->converter = converter_alloc();
+
+  if (decoder->converter == NULL) {
+    XAV_LOG_DEBUG("Couldn't allocate converter");
+    return -1;
+  }
+
   int out_sample_rate = decoder->c->sample_rate;
   enum AVSampleFormat out_sample_fmt = AV_SAMPLE_FMT_FLT;
 
