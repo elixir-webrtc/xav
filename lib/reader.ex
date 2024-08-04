@@ -50,7 +50,7 @@ defmodule Xav.Reader do
     read = opts[:read] || :video
     device? = opts[:device?] || false
 
-    case Xav.NIF.new_reader(path, to_int(device?), to_int(read)) do
+    case Xav.Reader.NIF.new(path, to_int(device?), to_int(read)) do
       {:ok, reader, in_format, out_format, sample_rate, bit_rate, duration, codec} ->
         {:ok,
          %__MODULE__{
@@ -88,7 +88,7 @@ defmodule Xav.Reader do
   """
   @spec next_frame(t()) :: {:ok, Xav.Frame.t()} | {:error, :eof}
   def next_frame(%__MODULE__{reader: reader}) do
-    case Xav.NIF.next_frame(reader) do
+    case Xav.Reader.NIF.next_frame(reader) do
       {:ok, {data, format, width, height, pts}} ->
         {:ok, Xav.Frame.new(data, format, width, height, pts)}
 

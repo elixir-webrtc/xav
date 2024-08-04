@@ -6,6 +6,7 @@ defmodule Xav.ReaderTest do
     assert {:error, _reason} = Xav.Reader.new("non_existing_input")
   end
 
+  @tag :debug
   test "new!/1" do
     %Xav.Reader{} = Xav.Reader.new!("./test/fixtures/sample_h264.mp4")
     assert_raise RuntimeError, fn -> Xav.Reader.new!("non_existing_input") end
@@ -41,7 +42,6 @@ defmodule Xav.ReaderTest do
     end
   end)
 
-  @tag :debug
   test "speech to text" do
     for {path, expected_output} <- [
           # This file has been downloaded from https://audio-samples.github.io/

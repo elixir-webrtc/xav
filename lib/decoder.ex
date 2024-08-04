@@ -15,7 +15,7 @@ defmodule Xav.Decoder do
   """
   @spec new(codec()) :: t()
   def new(codec) do
-    Xav.NIF.new_decoder(codec)
+    Xav.Decoder.NIF.new(codec)
   end
 
   @doc """
@@ -30,7 +30,7 @@ defmodule Xav.Decoder do
     pts = opts[:pts] || 0
     dts = opts[:dts] || 0
 
-    case Xav.NIF.decode(decoder, data, pts, dts) do
+    case Xav.Decoder.NIF.decode(decoder, data, pts, dts) do
       {:ok, {data, format, width, height, pts}} ->
         {:ok, Xav.Frame.new(data, format, width, height, pts)}
 

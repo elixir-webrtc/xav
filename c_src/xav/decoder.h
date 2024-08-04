@@ -2,6 +2,7 @@
 #include <libswresample/swresample.h>
 
 #include "converter.h"
+#include "utils.h"
 
 struct Decoder {
   enum AVMediaType media_type;
