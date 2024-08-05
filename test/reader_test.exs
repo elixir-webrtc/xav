@@ -41,11 +41,29 @@ defmodule Xav.ReaderTest do
     end
   end)
 
-  @tag :debug
   test "speech to text" do
-    # This file has been downloaded from https://audio-samples.github.io/
-    # Section: Samples from the model without biasing or priming.
-    reader = Xav.Reader.new!("./test/fixtures/melnet_sample_0.mp3", read: :audio)
+    for {path, expected_output} <- [
+          # This file has been downloaded from https://audio-samples.github.io/
+          # Section: Samples from the model without biasing or priming.
+          {"./test/fixtures/melnet_sample_0.mp3",
+           """
+            My thought, I have nobody by a beauty and will as you poured. \
+           Mr. Rochester has served and that so don't find a simple and \
+           devoted aboud to what might in a\
+           """},
+          {"./test/fixtures/harvard.wav",
+           """
+            The stale smell of old beer lingers. It takes heat to bring out the odor. \
+           A cold dip restores health in zest. A salt pickle tastes fine with ham. \
+           Tacos all pastora are my favorite. A zestful food is the hot cross bun.\
+           """}
+        ] do
+      test_speech_to_text(path, expected_output)
+    end
+  end
+
+  defp test_speech_to_text(path, expected_output) do
+    reader = Xav.Reader.new!(path, read: :audio)
 
     {:ok, whisper} = Bumblebee.load_model({:hf, "openai/whisper-tiny"})
     {:ok, featurizer} = Bumblebee.load_featurizer({:hf, "openai/whisper-tiny"})
@@ -65,15 +83,7 @@ defmodule Xav.ReaderTest do
     batch = Nx.Defn.jit_apply(&Function.identity/1, [batch])
     assert %{chunks: chunks} = Nx.Serving.run(serving, batch)
 
-    assert [
-             %{
-               text: """
-                My thought I have nobody by a beauty and will as you poured. \
-               Mr. Rochester has served in that so-done fine-simpless and \
-               devoted to bowed, to let might in a\
-               """
-             }
-           ] = chunks
+    assert [%{text: ^expected_output}] = chunks
   end
 
   defp read_frames(reader, acc \\ []) do

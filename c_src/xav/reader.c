@@ -1,6 +1,27 @@
 #include "reader.h"
 #include "utils.h"
+#include <libavutil/samplefmt.h>
 #include <libavutil/version.h>
+
+#include <inttypes.h>
+
+static int init_converter(struct Reader *reader);
+
+struct Reader *reader_alloc() {
+
+  struct Reader *reader = (struct Reader *)XAV_ALLOC(sizeof(struct Reader));
+
+  reader->path = NULL;
+  reader->frame = NULL;
+  reader->pkt = NULL;
+  reader->codec = NULL;
+  reader->c = NULL;
+  reader->fmt_ctx = NULL;
+  reader->input_format = NULL;
+  reader->options = NULL;
+
+  return reader;
+}
 
 int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, int device_flag,
                 enum AVMediaType media_type) {
@@ -9,18 +30,7 @@ int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, in
   memcpy(reader->path, path, path_size);
   reader->path[path_size] = '\0';
 
-  // TODO which of those are really needed?
-  reader->fmt_ctx = NULL;
-  reader->codec = NULL;
-  reader->c = NULL;
-  reader->frame = NULL;
-  reader->pkt = NULL;
-  reader->input_format = NULL;
-  reader->options = NULL;
-  reader->swr_ctx = NULL;
   reader->media_type = media_type;
-  reader->in_format_name = NULL;
-  reader->out_format_name = NULL;
 
   if (device_flag == 1) {
     avdevice_register_all();
@@ -68,35 +78,6 @@ int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, in
     return -2;
   }
 
-  if (reader->media_type == AVMEDIA_TYPE_AUDIO) {
-    reader->swr_ctx = swr_alloc();
-    enum AVSampleFormat out_sample_fmt = av_get_alt_sample_fmt(reader->c->sample_fmt, 0);
-
-#if LIBAVUTIL_VERSION_MAJOR >= 58
-    av_opt_set_chlayout(reader->swr_ctx, "in_chlayout", &reader->c->ch_layout, 0);
-    av_opt_set_chlayout(reader->swr_ctx, "out_chlayout", &reader->c->ch_layout, 0);
-#else
-    av_opt_set_channel_layout(reader->swr_ctx, "in_channel_layout", reader->c->channel_layout, 0);
-    av_opt_set_channel_layout(reader->swr_ctx, "out_channel_layout", reader->c->channel_layout, 0);
-#endif
-
-    av_opt_set_int(reader->swr_ctx, "in_sample_rate", reader->c->sample_rate, 0);
-    av_opt_set_int(reader->swr_ctx, "out_sample_rate", reader->c->sample_rate, 0);
-    av_opt_set_sample_fmt(reader->swr_ctx, "in_sample_fmt", reader->c->sample_fmt, 0);
-    av_opt_set_sample_fmt(reader->swr_ctx, "out_sample_fmt", out_sample_fmt, 0);
-
-    ret = swr_init(reader->swr_ctx);
-    if (ret < 0) {
-      return ret;
-    }
-
-    reader->in_format_name = av_get_sample_fmt_name(reader->c->sample_fmt);
-    reader->out_format_name = av_get_sample_fmt_name(out_sample_fmt);
-  } else {
-    reader->in_format_name = av_get_pix_fmt_name(reader->c->pix_fmt);
-    reader->out_format_name = "rgb";
-  }
-
   return 0;
 }
 
@@ -107,7 +88,7 @@ int reader_next_frame(struct Reader *reader) {
 
   if (ret == 0) {
     XAV_LOG_DEBUG("Received frame");
-    goto fin;
+    return 0;
   } else if (ret == AVERROR_EOF) {
     XAV_LOG_DEBUG("EOF");
     return ret;
@@ -155,7 +136,6 @@ int reader_next_frame(struct Reader *reader) {
     ret = avcodec_receive_frame(reader->c, reader->frame);
 
     if (ret == 0) {
-      XAV_LOG_DEBUG("Received frame");
       frame_ready = 1;
     } else if (ret == AVERROR_EOF) {
       XAV_LOG_DEBUG("EOF");
@@ -191,51 +171,37 @@ int reader_next_frame(struct Reader *reader) {
     }
   }
 
-fin:
-  if (reader->media_type == AVMEDIA_TYPE_VIDEO && reader->frame->format != AV_PIX_FMT_RGB24) {
-    XAV_LOG_DEBUG("Converting to RGB");
-    convert_to_rgb(reader->frame, reader->rgb_dst_data, reader->rgb_dst_linesize);
-    reader->frame_data = reader->rgb_dst_data;
-    reader->frame_linesize = reader->rgb_dst_linesize;
-  } else if (reader->media_type == AVMEDIA_TYPE_VIDEO) {
-    reader->frame_data = reader->frame->data;
-    reader->frame_linesize = reader->frame->linesize;
-  } else if (reader->media_type == AVMEDIA_TYPE_AUDIO &&
-             av_sample_fmt_is_planar(reader->frame->format) == 1) {
-    XAV_LOG_DEBUG("Converting to interleaved");
-
-    if (convert_to_interleaved(reader->swr_ctx, reader->frame, reader->rgb_dst_data,
-                               reader->rgb_dst_linesize) != 0) {
-      return -1;
-    }
-
-    reader->frame_data = reader->rgb_dst_data;
-    reader->frame_linesize = reader->rgb_dst_linesize;
-  } else {
-    reader->frame_data = reader->frame->extended_data;
-  }
-
   return 0;
 }
 
-void reader_free_frame(struct Reader *reader) {
-  av_frame_unref(reader->frame);
-  if (reader->media_type == AVMEDIA_TYPE_AUDIO && reader->frame_data == reader->rgb_dst_data) {
-    av_freep(&reader->frame_data[0]);
-  } else if (reader->media_type == AVMEDIA_TYPE_VIDEO &&
-             reader->frame_data == reader->rgb_dst_data) {
-    av_freep(&reader->frame_data[0]);
-  }
-}
+void reader_free_frame(struct Reader *reader) { av_frame_unref(reader->frame); }
 
-void reader_free(struct Reader *reader) {
+void reader_free(struct Reader **reader) {
   XAV_LOG_DEBUG("Freeing Reader object");
-  if (reader->swr_ctx != NULL) {
-    swr_free(&reader->swr_ctx);
+  if (*reader != NULL) {
+    struct Reader *r = *reader;
+
+    if (r->c != NULL) {
+      avcodec_free_context(&r->c);
+    }
+
+    if (r->pkt != NULL) {
+      av_packet_free(&r->pkt);
+    }
+
+    if (r->frame != NULL) {
+      av_frame_free(&r->frame);
+    }
+
+    if (r->fmt_ctx != NULL) {
+      avformat_close_input(&r->fmt_ctx);
+    }
+
+    if (r->path != NULL) {
+      XAV_FREE(r->path);
+    }
+
+    XAV_FREE(r);
+    *reader = NULL;
   }
-  avcodec_free_context(&reader->c);
-  av_packet_free(&reader->pkt);
-  av_frame_free(&reader->frame);
-  avformat_close_input(&reader->fmt_ctx);
-  XAV_FREE(reader->path);
 }
