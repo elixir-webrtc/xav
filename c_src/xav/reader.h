@@ -3,6 +3,7 @@
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
 #include <libavutil/imgutils.h>
+#include <libavutil/samplefmt.h>
 #include <libswresample/swresample.h>
 #include <libswscale/swscale.h>
 #include <stdio.h>
@@ -23,9 +24,6 @@ struct Reader {
   const AVInputFormat *input_format;
   AVDictionary *options;
   enum AVMediaType media_type;
-
-  const char *in_format_name;
-  const char *out_format_name;
 };
 
 struct Reader *reader_alloc();

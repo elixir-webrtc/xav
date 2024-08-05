@@ -1,7 +1,7 @@
 #include "xav_reader.h"
 #include "video_converter.h"
 
-static int init_converter(struct XavReader *xav_reader);
+static int init_audio_converter(struct XavReader *xav_reader);
 ErlNifResourceType *xav_reader_resource_type;
 
 ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
@@ -49,31 +49,37 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "couldnt_create_new_reader");
   }
 
-  ERL_NIF_TERM in_format_term = enif_make_atom(env, xav_reader->reader->in_format_name);
-  ERL_NIF_TERM out_format_term = enif_make_atom(env, xav_reader->reader->out_format_name);
-
-  ERL_NIF_TERM sample_rate_term;
   if (xav_reader->reader->media_type == AVMEDIA_TYPE_AUDIO) {
-    sample_rate_term = enif_make_int(env, xav_reader->reader->c->sample_rate);
+    ret = init_audio_converter(xav_reader);
+    if (ret < 0) {
+      return xav_nif_raise(env, "couldnt_init_converter");
+    }
   }
 
+  ERL_NIF_TERM ok_term = enif_make_atom(env, "ok");
   ERL_NIF_TERM bit_rate_term = enif_make_int64(env, xav_reader->reader->fmt_ctx->bit_rate);
   ERL_NIF_TERM duration_term =
       enif_make_int64(env, xav_reader->reader->fmt_ctx->duration / AV_TIME_BASE);
   ERL_NIF_TERM codec_term = enif_make_atom(env, xav_reader->reader->codec->name);
-
   ERL_NIF_TERM xav_term = enif_make_resource(env, xav_reader);
   enif_release_resource(xav_reader);
 
-  ERL_NIF_TERM ok_term = enif_make_atom(env, "ok");
-
   if (xav_reader->reader->media_type == AVMEDIA_TYPE_AUDIO) {
+    ERL_NIF_TERM sample_rate_term = enif_make_int(env, xav_reader->reader->c->sample_rate);
+    ERL_NIF_TERM in_format_term =
+        enif_make_atom(env, av_get_sample_fmt_name(xav_reader->reader->c->sample_fmt));
+    ERL_NIF_TERM out_format_term =
+        enif_make_atom(env, av_get_sample_fmt_name(xav_reader->ac->out_sample_fmt));
     return enif_make_tuple(env, 8, ok_term, xav_term, in_format_term, out_format_term,
                            sample_rate_term, bit_rate_term, duration_term, codec_term);
-  }
 
-  return enif_make_tuple(env, 7, ok_term, xav_term, in_format_term, out_format_term, bit_rate_term,
-                         duration_term, codec_term);
+  } else if (xav_reader->reader->media_type == AVMEDIA_TYPE_VIDEO) {
+    ERL_NIF_TERM in_format_term =
+        enif_make_atom(env, av_get_pix_fmt_name(xav_reader->reader->c->pix_fmt));
+    ERL_NIF_TERM out_format_term = enif_make_atom(env, "rgb");
+    return enif_make_tuple(env, 7, ok_term, xav_term, in_format_term, out_format_term,
+                           bit_rate_term, duration_term, codec_term);
+  }
 }
 
 ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
@@ -119,14 +125,6 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     int out_samples;
     int out_size;
 
-    if (xav_reader->ac == NULL) {
-      XAV_LOG_DEBUG("Converter not initialized. Initializing.");
-      ret = init_converter(xav_reader);
-      if (ret < 0) {
-        return ret;
-      }
-    }
-
     ret = audio_converter_convert(xav_reader->ac, xav_reader->reader->frame, &out_data,
                                   &out_samples, &out_size);
     if (ret < 0) {
@@ -145,7 +143,7 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   return xav_nif_ok(env, frame_term);
 }
 
-static int init_converter(struct XavReader *xav_reader) {
+static int init_audio_converter(struct XavReader *xav_reader) {
   xav_reader->ac = audio_converter_alloc();
 
   if (xav_reader->ac == NULL) {
@@ -161,19 +159,19 @@ static int init_converter(struct XavReader *xav_reader) {
   in_chlayout.layout = xav_reader->reader->c->ch_layout;
   av_channel_layout_from_mask(&out_chlayout.layout, AV_CH_LAYOUT_MONO);
 #else
-  in_chlayout.layout = xav_reader->reader->frame->channel_layout;
+  in_chlayout.layout = xav_reader->reader->c->channel_layout;
   out_chlayout.layout = AV_CH_LAYOUT_MONO;
 
-  if (xav_reader->reader->frame->channel_layout == 0 && xav_reader->reader->frame->channels > 0) {
+  if (xav_reader->reader->c->channel_layout == 0 && xav_reader->reader->c->channels > 0) {
     // In newer FFmpeg versions, 0 means that the order of channels is
     // unspecified but there still might be information about channels number.
     // Let's check againts it and take default channel order for the given channels number.
     // This is also what newer FFmpeg versions do under the hood when passing
     // unspecified channel order.
     XAV_LOG_DEBUG("Channel layout unset. Setting to default for channels number: %d",
-                  xav_reader->reader->frame->channels);
-    in_chlayout.layout = av_get_default_channel_layout(xav_reader->reader->frame->channels);
-  } else if (xav_reader->reader->frame->channel_layout == 0) {
+                  xav_reader->reader->c->channels);
+    in_chlayout.layout = av_get_default_channel_layout(xav_reader->reader->c->channels);
+  } else if (xav_reader->reader->c->channel_layout == 0) {
     XAV_LOG_DEBUG("Both channel layout and channels are unset. Cannot init converter.");
     return -1;
   }

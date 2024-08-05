@@ -19,8 +19,6 @@ struct Reader *reader_alloc() {
   reader->fmt_ctx = NULL;
   reader->input_format = NULL;
   reader->options = NULL;
-  reader->in_format_name = NULL;
-  reader->out_format_name = NULL;
 
   return reader;
 }
@@ -78,14 +76,6 @@ int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, in
 
   if (avcodec_open2(reader->c, reader->codec, NULL) < 0) {
     return -2;
-  }
-
-  if (reader->media_type == AVMEDIA_TYPE_AUDIO) {
-    reader->in_format_name = "rgb";
-    reader->out_format_name = "rgb";
-  } else {
-    reader->in_format_name = av_get_pix_fmt_name(reader->c->pix_fmt);
-    reader->out_format_name = "rgb";
   }
 
   return 0;
