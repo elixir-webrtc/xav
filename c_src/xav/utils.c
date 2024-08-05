@@ -55,8 +55,8 @@ ERL_NIF_TERM xav_nif_audio_frame_to_term(ErlNifEnv *env, uint8_t **out_data, int
   return enif_make_tuple(env, 4, data_term, format_term, samples_term, pts_term);
 }
 
-ERL_NIF_TERM xav_nif_video_frame_to_term(ErlNifEnv *env, AVFrame *frame, unsigned char *data[],
-                                         int *linesize, const char *format_name) {
+ERL_NIF_TERM xav_nif_video_frame_to_term(ErlNifEnv *env, AVFrame *frame, uint8_t *data[4],
+                                         int linesize[4], const char *format_name) {
   ERL_NIF_TERM data_term;
   unsigned char *ptr = enif_make_new_binary(env, linesize[0] * frame->height, &data_term);
   memcpy(ptr, data[0], linesize[0] * frame->height);

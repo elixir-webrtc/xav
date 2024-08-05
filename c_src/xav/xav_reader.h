@@ -1,7 +1,7 @@
-#include "converter.h"
+#include "audio_converter.h"
 #include "reader.h"
 
 struct XavReader {
   struct Reader *reader;
-  struct Converter *converter;
+  struct AudioConverter *ac;
 };

@@ -1,5 +1,7 @@
 #include "xav_reader.h"
+#include "video_converter.h"
 
+static int init_converter(struct XavReader *xav_reader);
 ErlNifResourceType *xav_reader_resource_type;
 
 ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
@@ -32,7 +34,7 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   struct XavReader *xav_reader =
       enif_alloc_resource(xav_reader_resource_type, sizeof(struct XavReader));
   xav_reader->reader = NULL;
-  xav_reader->converter = NULL;
+  xav_reader->ac = NULL;
 
   xav_reader->reader = reader_alloc();
   if (xav_reader->reader == NULL) {
@@ -75,6 +77,8 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 }
 
 ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  ERL_NIF_TERM frame_term;
+
   if (argc != 1) {
     return xav_nif_raise(env, "invalid_arg_count");
   }
@@ -92,24 +96,93 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "receive_frame");
   }
 
-  XAV_LOG_DEBUG("Returning to Erlang");
-
-  ERL_NIF_TERM frame_term;
+  // convert
   if (xav_reader->reader->media_type == AVMEDIA_TYPE_VIDEO) {
-    frame_term = xav_nif_video_frame_to_term(
-        env, xav_reader->reader->frame, xav_reader->reader->frame_data,
-        xav_reader->reader->frame_linesize, xav_reader->reader->out_format_name);
-  } else if (xav_reader->reader->media_type == AVMEDIA_TYPE_AUDIO) {
-    const char *out_format = av_get_sample_fmt_name(xav_reader->reader->converter->out_sample_fmt);
+    XAV_LOG_DEBUG("Converting video to RGB");
 
-    frame_term = xav_nif_audio_frame_to_term(
-        env, xav_reader->reader->out_data, xav_reader->reader->out_samples,
-        xav_reader->reader->out_size, out_format, xav_reader->reader->frame->pts);
+    uint8_t *out_data[4];
+    int out_linesize[4];
+
+    ret = video_converter_convert(xav_reader->reader->frame, out_data, out_linesize);
+    if (ret <= 0) {
+      return xav_nif_raise(env, "failed_to_read");
+    }
+
+    frame_term =
+        xav_nif_video_frame_to_term(env, xav_reader->reader->frame, out_data, out_linesize, "rgb");
+
+    av_freep(&out_data[0]);
+  } else if (xav_reader->reader->media_type == AVMEDIA_TYPE_AUDIO) {
+    XAV_LOG_DEBUG("Converting audio to desired out format");
+
+    uint8_t **out_data;
+    int out_samples;
+    int out_size;
+
+    if (xav_reader->ac == NULL) {
+      XAV_LOG_DEBUG("Converter not initialized. Initializing.");
+      ret = init_converter(xav_reader);
+      if (ret < 0) {
+        return ret;
+      }
+    }
+
+    ret = audio_converter_convert(xav_reader->ac, xav_reader->reader->frame, &out_data,
+                                  &out_samples, &out_size);
+    if (ret < 0) {
+      return xav_nif_raise(env, "failed_to_read");
+    }
+
+    const char *out_format = av_get_sample_fmt_name(xav_reader->ac->out_sample_fmt);
+
+    frame_term = xav_nif_audio_frame_to_term(env, out_data, out_samples, out_size, out_format,
+                                             xav_reader->reader->frame->pts);
+    av_freep(&out_data[0]);
   }
 
   reader_free_frame(xav_reader->reader);
 
   return xav_nif_ok(env, frame_term);
+}
+
+static int init_converter(struct XavReader *xav_reader) {
+  xav_reader->ac = audio_converter_alloc();
+
+  if (xav_reader->ac == NULL) {
+    XAV_LOG_DEBUG("Couldn't allocate converter");
+    return -1;
+  }
+
+  int out_sample_rate = 16000;
+  enum AVSampleFormat out_sample_fmt = AV_SAMPLE_FMT_FLT;
+
+  struct ChannelLayout in_chlayout, out_chlayout;
+#if LIBAVUTIL_VERSION_MAJOR >= 58
+  in_chlayout.layout = xav_reader->reader->c->ch_layout;
+  av_channel_layout_from_mask(&out_chlayout.layout, AV_CH_LAYOUT_MONO);
+#else
+  in_chlayout.layout = xav_reader->reader->frame->channel_layout;
+  out_chlayout.layout = AV_CH_LAYOUT_MONO;
+
+  if (xav_reader->reader->frame->channel_layout == 0 && xav_reader->reader->frame->channels > 0) {
+    // In newer FFmpeg versions, 0 means that the order of channels is
+    // unspecified but there still might be information about channels number.
+    // Let's check againts it and take default channel order for the given channels number.
+    // This is also what newer FFmpeg versions do under the hood when passing
+    // unspecified channel order.
+    XAV_LOG_DEBUG("Channel layout unset. Setting to default for channels number: %d",
+                  xav_reader->reader->frame->channels);
+    in_chlayout.layout = av_get_default_channel_layout(xav_reader->reader->frame->channels);
+  } else if (xav_reader->reader->frame->channel_layout == 0) {
+    XAV_LOG_DEBUG("Both channel layout and channels are unset. Cannot init converter.");
+    return -1;
+  }
+
+#endif
+
+  return audio_converter_init(xav_reader->ac, in_chlayout, xav_reader->reader->c->sample_rate,
+                              xav_reader->reader->c->sample_fmt, out_chlayout, out_sample_rate,
+                              out_sample_fmt);
 }
 
 void free_xav_reader(ErlNifEnv *env, void *obj) {
@@ -119,8 +192,8 @@ void free_xav_reader(ErlNifEnv *env, void *obj) {
     reader_free(&xav_reader->reader);
   }
 
-  if (xav_reader->converter != NULL) {
-    converter_free(&xav_reader->converter);
+  if (xav_reader->ac != NULL) {
+    audio_converter_free(&xav_reader->ac);
   }
 }
 

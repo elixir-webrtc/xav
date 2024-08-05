@@ -11,11 +11,11 @@ XAV_READER_SO = $(PRIV_DIR)/libxavreader.so
 # uncomment to compile with debug logs
 XAV_DEBUG_LOGS = -DXAV_DEBUG=1
 
-DECODER_HEADERS = $(XAV_DIR)/xav_decoder.h $(XAV_DIR)/decoder.h $(XAV_DIR)/converter.h $(XAV_DIR)/utils.h $(XAV_DIR)/channel_layout.h
-DECODER_SOURCES = $(XAV_DIR)/xav_decoder.c $(XAV_DIR)/decoder.c $(XAV_DIR)/converter.c $(XAV_DIR)/utils.c
+DECODER_HEADERS = $(XAV_DIR)/xav_decoder.h $(XAV_DIR)/decoder.h $(XAV_DIR)/video_converter.h $(XAV_DIR)/audio_converter.h $(XAV_DIR)/utils.h $(XAV_DIR)/channel_layout.h
+DECODER_SOURCES = $(XAV_DIR)/xav_decoder.c $(XAV_DIR)/decoder.c $(XAV_DIR)/video_converter.c $(XAV_DIR)/audio_converter.c $(XAV_DIR)/utils.c
 
-READER_HEADERS = $(XAV_DIR)/xav_reader.h $(XAV_DIR)/reader.h $(XAV_DIR)/converter.h $(XAV_DIR)/utils.h $(XAV_DIR)/channel_layout.h
-READER_SOURCES = $(XAV_DIR)/xav_reader.c $(XAV_DIR)/reader.c $(XAV_DIR)/converter.c $(XAV_DIR)/utils.c
+READER_HEADERS = $(XAV_DIR)/xav_reader.h $(XAV_DIR)/reader.h $(XAV_DIR)/video_converter.h $(XAV_DIR)/audio_converter.h $(XAV_DIR)/utils.h $(XAV_DIR)/channel_layout.h
+READER_SOURCES = $(XAV_DIR)/xav_reader.c $(XAV_DIR)/reader.c $(XAV_DIR)/video_converter.c $(XAV_DIR)/audio_converter.c $(XAV_DIR)/utils.c
 
 CFLAGS = $(XAV_DEBUG_LOGS) -fPIC -shared
 IFLAGS = -I$(ERTS_INCLUDE_DIR) -I$(XAV_DIR)

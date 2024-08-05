@@ -4,19 +4,21 @@
 #include <libswresample/swresample.h>
 #include <stdint.h>
 
+#include "audio_converter.h"
 #include "channel_layout.h"
-#include "converter.h"
 #include "utils.h"
 
-struct Converter *converter_alloc() {
-  struct Converter *converter = (struct Converter *)XAV_ALLOC(sizeof(struct Converter));
+struct AudioConverter *audio_converter_alloc() {
+  struct AudioConverter *converter =
+      (struct AudioConverter *)XAV_ALLOC(sizeof(struct AudioConverter));
   converter->swr_ctx = NULL;
   return converter;
 }
 
-int converter_init(struct Converter *c, struct ChannelLayout in_chlayout, int in_sample_rate,
-                   enum AVSampleFormat in_sample_fmt, struct ChannelLayout out_chlayout,
-                   int out_sample_rate, enum AVSampleFormat out_sample_fmt) {
+int audio_converter_init(struct AudioConverter *c, struct ChannelLayout in_chlayout,
+                         int in_sample_rate, enum AVSampleFormat in_sample_fmt,
+                         struct ChannelLayout out_chlayout, int out_sample_rate,
+                         enum AVSampleFormat out_sample_fmt) {
   c->swr_ctx = swr_alloc();
   c->in_sample_rate = in_sample_rate;
   c->out_sample_rate = out_sample_rate;
@@ -40,8 +42,8 @@ int converter_init(struct Converter *c, struct ChannelLayout in_chlayout, int in
   return swr_init(c->swr_ctx);
 }
 
-int converter_convert(struct Converter *c, AVFrame *src_frame, uint8_t ***out_data,
-                      int *out_samples, int *out_size) {
+int audio_converter_convert(struct AudioConverter *c, AVFrame *src_frame, uint8_t ***out_data,
+                            int *out_samples, int *out_size) {
 
 #if LIBAVUTIL_VERSION_MAJOR >= 58
   int out_nb_channels = c->out_chlayout.layout.nb_channels;
@@ -65,13 +67,12 @@ int converter_convert(struct Converter *c, AVFrame *src_frame, uint8_t ***out_da
     return ret;
   }
 
-  *out_data = out_data_tmp;
-
   *out_samples = swr_convert(c->swr_ctx, out_data_tmp, max_out_nb_samples,
                              (const uint8_t **)src_frame->data, src_frame->nb_samples);
 
   if (*out_samples < 0) {
     XAV_LOG_DEBUG("Couldn't convert samples: %d", *out_samples);
+    av_freep(&out_data_tmp[0]);
     return -1;
   }
 
@@ -79,12 +80,14 @@ int converter_convert(struct Converter *c, AVFrame *src_frame, uint8_t ***out_da
 
   *out_size = *out_samples * out_bytes_per_sample * out_nb_channels;
 
+  *out_data = out_data_tmp;
+
   return 0;
 }
 
-void converter_free(struct Converter **converter) {
+void audio_converter_free(struct AudioConverter **converter) {
   if (*converter != NULL) {
-    struct Converter *c = *converter;
+    struct AudioConverter *c = *converter;
 
     if (c->swr_ctx != NULL) {
       swr_free(&c->swr_ctx);

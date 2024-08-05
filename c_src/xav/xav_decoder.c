@@ -1,6 +1,10 @@
 #include "xav_decoder.h"
+#include "audio_converter.h"
+#include "video_converter.h"
 
 ErlNifResourceType *xav_decoder_resource_type;
+
+static int init_audio_converter(struct XavDecoder *xav_decoder);
 
 ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   if (argc != 1) {
@@ -21,7 +25,7 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   struct XavDecoder *xav_decoder =
       enif_alloc_resource(xav_decoder_resource_type, sizeof(struct XavDecoder));
   xav_decoder->decoder = NULL;
-  xav_decoder->converter = NULL;
+  xav_decoder->ac = NULL;
 
   xav_decoder->decoder = decoder_alloc();
   if (xav_decoder->decoder == NULL) {
@@ -39,6 +43,8 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 }
 
 ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  ERL_NIF_TERM frame_term;
+
   if (argc != 4) {
     return xav_nif_raise(env, "invalid_arg_count");
   }
@@ -76,26 +82,78 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "failed_to_decode");
   }
 
-  ERL_NIF_TERM frame_term;
+  // convert
   if (xav_decoder->decoder->media_type == AVMEDIA_TYPE_VIDEO) {
+    XAV_LOG_DEBUG("Converting video to RGB");
 
-    frame_term = xav_nif_video_frame_to_term(env, xav_decoder->decoder->frame,
-                                             xav_decoder->decoder->frame_data,
-                                             xav_decoder->decoder->frame_linesize, "rgb");
+    uint8_t *out_data[4];
+    int out_linesize[4];
 
+    ret = video_converter_convert(xav_decoder->decoder->frame, out_data, out_linesize);
+    if (ret <= 0) {
+      return xav_nif_raise(env, "failed_to_decode");
+    }
+
+    frame_term = xav_nif_video_frame_to_term(env, xav_decoder->decoder->frame, out_data,
+                                             out_linesize, "rgb");
+
+    av_freep(&out_data[0]);
   } else if (xav_decoder->decoder->media_type == AVMEDIA_TYPE_AUDIO) {
-    const char *out_format =
-        av_get_sample_fmt_name(xav_decoder->decoder->converter->out_sample_fmt);
+    XAV_LOG_DEBUG("Converting audio to desired out format");
 
-    frame_term = xav_nif_audio_frame_to_term(
-        env, xav_decoder->decoder->out_data, xav_decoder->decoder->out_samples,
-        xav_decoder->decoder->out_size, out_format, xav_decoder->decoder->frame->pts);
+    uint8_t **out_data;
+    int out_samples;
+    int out_size;
+
+    if (xav_decoder->ac == NULL) {
+      ret = init_audio_converter(xav_decoder);
+      if (ret < 0) {
+        return ret;
+      }
+    }
+
+    ret = audio_converter_convert(xav_decoder->ac, xav_decoder->decoder->frame, &out_data,
+                                  &out_samples, &out_size);
+    if (ret < 0) {
+      return xav_nif_raise(env, "failed_to_decode");
+    }
+
+    const char *out_format = av_get_sample_fmt_name(xav_decoder->ac->out_sample_fmt);
+
+    frame_term = xav_nif_audio_frame_to_term(env, out_data, out_samples, out_size, out_format,
+                                             xav_decoder->decoder->frame->pts);
+
+    av_freep(&out_data[0]);
   }
 
   decoder_free_frame(xav_decoder->decoder);
 
   return xav_nif_ok(env, frame_term);
-  ;
+}
+
+static int init_audio_converter(struct XavDecoder *xav_decoder) {
+  xav_decoder->ac = audio_converter_alloc();
+
+  if (xav_decoder->ac == NULL) {
+    XAV_LOG_DEBUG("Couldn't allocate converter");
+    return -1;
+  }
+
+  int out_sample_rate = xav_decoder->decoder->c->sample_rate;
+  enum AVSampleFormat out_sample_fmt = AV_SAMPLE_FMT_FLT;
+
+  struct ChannelLayout in_chlayout, out_chlayout;
+#if LIBAVUTIL_VERSION_MAJOR >= 58
+  in_chlayout.layout = xav_decoder->decoder->c->ch_layout;
+  out_chlayout.layout = xav_decoder->decoder->c->ch_layout;
+#else
+  in_chlayout.layout = xav_decoder->decoder->c->channel_layout;
+  out_chlayout.layout = xav_decoder->decoder->c->channel_layout;
+#endif
+
+  return audio_converter_init(xav_decoder->ac, in_chlayout, xav_decoder->decoder->c->sample_rate,
+                              xav_decoder->decoder->c->sample_fmt, out_chlayout, out_sample_rate,
+                              out_sample_fmt);
 }
 
 void free_xav_decoder(ErlNifEnv *env, void *obj) {
@@ -105,8 +163,8 @@ void free_xav_decoder(ErlNifEnv *env, void *obj) {
     decoder_free(&xav_decoder->decoder);
   }
 
-  if (xav_decoder->converter != NULL) {
-    converter_free(&xav_decoder->converter);
+  if (xav_decoder->ac != NULL) {
+    audio_converter_free(&xav_decoder->ac);
   }
 }
 
