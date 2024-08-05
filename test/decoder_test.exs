@@ -304,7 +304,6 @@ defmodule Xav.DecoderTest do
                Xav.Decoder.decode(decoder, @opus_frame)
     end
 
-    @tag :debug
     test "video keyframe" do
       decoder = Xav.Decoder.new(:vp8)
 
