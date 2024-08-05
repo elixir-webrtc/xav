@@ -1,5 +1,5 @@
 defmodule Xav.ReaderTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   test "new/1" do
     assert {:ok, %Xav.Reader{}} = Xav.Reader.new("./test/fixtures/sample_h264.mp4")
