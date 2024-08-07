@@ -31,6 +31,13 @@ decoder = Xav.Decoder.new(:vp8)
 {:ok, %Xav.Frame{} = frame} = Xav.Decoder.decode(decoder, <<"somebinary">>)
 ```
 
+Decode with audio resampling
+
+```elixir
+decoder = Xav.Decoder.new(:opus, out_format: :f32, out_sample_rate: 16_000)
+{:ok, %Xav.Frame{} = frame} = Xav.Decoder.decode(decoder, <<"somebinary">>)
+```
+
 Read from a file:
 
 ```elixir
@@ -52,7 +59,8 @@ Kino.Image.new(tensor)
 Speech to text:
 
 ```elixir
-r = Xav.Reader.new!("sample.mp3", read: :audio)
+# See https://hexdocs.pm/bumblebee/Bumblebee.Audio.WhisperFeaturizer.html for default sampling rate
+r = Xav.Reader.new!("sample.mp3", read: :audio, out_format: :f32, out_channels: 1, out_sample_rate: 16_000)
 
 {:ok, whisper} = Bumblebee.load_model({:hf, "openai/whisper-tiny"})
 {:ok, featurizer} = Bumblebee.load_featurizer({:hf, "openai/whisper-tiny"})

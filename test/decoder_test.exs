@@ -300,8 +300,21 @@ defmodule Xav.DecoderTest do
     test "audio" do
       decoder = Xav.Decoder.new(:opus)
 
-      assert {:ok, %Xav.Frame{samples: 960, pts: 0, format: :flt}} =
+      assert {:ok, %Xav.Frame{data: data, samples: 960, pts: 0, format: :f32}} =
                Xav.Decoder.decode(decoder, @opus_frame)
+
+      assert byte_size(data) == 7680
+    end
+
+    test "audio with resampling" do
+      decoder = Xav.Decoder.new(:opus, out_format: :u8, out_sample_rate: 16_000, out_channels: 1)
+
+      # after changing out_format and out_sample rate, we should have less samples
+      # and the data should be smaller
+      assert {:ok, %Xav.Frame{data: data, samples: 304, pts: 0, format: :u8}} =
+               Xav.Decoder.decode(decoder, @opus_frame)
+
+      assert byte_size(data) == 304
     end
 
     test "video keyframe" do

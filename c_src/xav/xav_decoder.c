@@ -7,7 +7,7 @@ ErlNifResourceType *xav_decoder_resource_type;
 static int init_audio_converter(struct XavDecoder *xav_decoder);
 
 ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  if (argc != 1) {
+  if (argc != 4) {
     return xav_nif_raise(env, "invalid_arg_count");
   }
 
@@ -22,10 +22,34 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "failed_to_get_atom");
   }
 
+  unsigned int out_format_len;
+  if (!enif_get_atom_length(env, argv[1], &out_format_len, ERL_NIF_LATIN1)) {
+    return xav_nif_raise(env, "failed_to_get_atom_length");
+  }
+
+  char *out_format = (char *)XAV_ALLOC((out_format_len + 1) * sizeof(char *));
+
+  if (enif_get_atom(env, argv[1], out_format, out_format_len + 1, ERL_NIF_LATIN1) == 0) {
+    return xav_nif_raise(env, "failed_to_get_atom");
+  }
+
+  int out_sample_rate;
+  if (!enif_get_int(env, argv[2], &out_sample_rate)) {
+    return xav_nif_raise(env, "invalid_out_sample_rate");
+  }
+
+  int out_channels;
+  if (!enif_get_int(env, argv[3], &out_channels)) {
+    return xav_nif_raise(env, "invalid_out_channels");
+  }
+
   struct XavDecoder *xav_decoder =
       enif_alloc_resource(xav_decoder_resource_type, sizeof(struct XavDecoder));
   xav_decoder->decoder = NULL;
   xav_decoder->ac = NULL;
+  xav_decoder->out_format = out_format;
+  xav_decoder->out_sample_rate = out_sample_rate;
+  xav_decoder->out_channels = out_channels;
 
   xav_decoder->decoder = decoder_alloc();
   if (xav_decoder->decoder == NULL) {
@@ -120,6 +144,12 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
     const char *out_format = av_get_sample_fmt_name(xav_decoder->ac->out_sample_fmt);
 
+    if (strcmp(out_format, "flt") == 0) {
+      out_format = "f32";
+    } else if (strcmp(out_format, "dbl") == 0) {
+      out_format = "f64";
+    }
+
     frame_term = xav_nif_audio_frame_to_term(env, out_data, out_samples, out_size, out_format,
                                              xav_decoder->decoder->frame->pts);
 
@@ -139,16 +169,47 @@ static int init_audio_converter(struct XavDecoder *xav_decoder) {
     return -1;
   }
 
-  int out_sample_rate = xav_decoder->decoder->c->sample_rate;
-  enum AVSampleFormat out_sample_fmt = AV_SAMPLE_FMT_FLT;
+  int out_sample_rate;
+  if (xav_decoder->out_sample_rate == 0) {
+    out_sample_rate = xav_decoder->decoder->c->sample_rate;
+  } else {
+    out_sample_rate = xav_decoder->out_sample_rate;
+  }
+
+  enum AVSampleFormat out_sample_fmt;
+  if (strcmp(xav_decoder->out_format, "u8") == 0) {
+    out_sample_fmt = AV_SAMPLE_FMT_U8;
+  } else if (strcmp(xav_decoder->out_format, "s16") == 0) {
+    out_sample_fmt = AV_SAMPLE_FMT_S16;
+  } else if (strcmp(xav_decoder->out_format, "s32") == 0) {
+    out_sample_fmt = AV_SAMPLE_FMT_S32;
+  } else if (strcmp(xav_decoder->out_format, "s64") == 0) {
+    out_sample_fmt = AV_SAMPLE_FMT_S64;
+  } else if (strcmp(xav_decoder->out_format, "f32") == 0) {
+    out_sample_fmt = AV_SAMPLE_FMT_FLT;
+  } else if (strcmp(xav_decoder->out_format, "f64") == 0) {
+    out_sample_fmt = AV_SAMPLE_FMT_DBL;
+  } else if (strcmp(xav_decoder->out_format, "nil") == 0) {
+    out_sample_fmt = av_get_alt_sample_fmt(xav_decoder->decoder->c->sample_fmt, 0);
+  } else {
+    return -1;
+  }
 
   struct ChannelLayout in_chlayout, out_chlayout;
 #if LIBAVUTIL_VERSION_MAJOR >= 58
   in_chlayout.layout = xav_decoder->decoder->c->ch_layout;
-  out_chlayout.layout = xav_decoder->decoder->c->ch_layout;
+  if (xav_decoder->out_channels == 0) {
+    out_chlayout.layout = in_chlayout.layout;
+  } else {
+    av_channel_layout_default(&out_chlayout.layout, xav_decoder->out_channels);
+  }
 #else
   in_chlayout.layout = xav_decoder->decoder->c->channel_layout;
-  out_chlayout.layout = xav_decoder->decoder->c->channel_layout;
+  if (xav_decoder->out_channels == 0) {
+    out_chlayout.layout = in_chlayout.layout;
+  } else {
+    out_chlayout.layout = av_get_default_channel_layout(xav_decoder->out_channels);
+  }
 #endif
 
   return audio_converter_init(xav_decoder->ac, in_chlayout, xav_decoder->decoder->c->sample_rate,
@@ -168,7 +229,7 @@ void free_xav_decoder(ErlNifEnv *env, void *obj) {
   }
 }
 
-static ErlNifFunc xav_funcs[] = {{"new", 1, new},
+static ErlNifFunc xav_funcs[] = {{"new", 4, new},
                                  {"decode", 4, decode, ERL_NIF_DIRTY_JOB_CPU_BOUND}};
 
 static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {

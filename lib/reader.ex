@@ -10,20 +10,29 @@ defmodule Xav.Reader do
   Defaults to `:video`.
   * `device?` - determines whether path points to the camera. Defaults to `false`.
   """
-  @type opts :: [read: :audio | :video, device?: boolean]
+  @type opts :: [
+          read: :audio | :video,
+          device?: boolean,
+          out_format: Xav.Frame.format(),
+          out_sample_rate: integer(),
+          out_channels: integer()
+        ]
 
   @type t() :: %__MODULE__{
           reader: reference(),
           in_format: atom(),
           out_format: atom(),
-          sample_rate: integer() | nil,
+          in_sample_rate: integer() | nil,
+          out_sample_rate: integer() | nil,
+          in_channels: integer() | nil,
+          out_channels: integer() | nil,
           bit_rate: integer(),
           duration: integer(),
           codec: atom()
         }
 
   @enforce_keys [:reader, :in_format, :out_format, :bit_rate, :duration, :codec]
-  defstruct @enforce_keys ++ [:sample_rate]
+  defstruct @enforce_keys ++ [:in_sample_rate, :out_sample_rate, :in_channels, :out_channels]
 
   @doc """
   The same as new/1 but raises on error.
@@ -44,20 +53,39 @@ defmodule Xav.Reader do
   locked to 10.
 
   Microphone input is not supported.
+
+  `opts` can be used to specify desired output parameters.
+  Video frames are always returned in RGB format. This setting cannot be changed.
+  Audio samples are always in the packed form.
+  See `Xav.Decoder.new/2` for more information.
   """
   @spec new(String.t(), opts()) :: {:ok, t()} | {:error, term()}
   def new(path, opts \\ []) do
     read = opts[:read] || :video
     device? = opts[:device?] || false
+    out_format = opts[:out_format]
+    out_sample_rate = opts[:out_sample_rate] || 0
+    out_channels = opts[:out_channels] || 0
 
-    case Xav.Reader.NIF.new(path, to_int(device?), to_int(read)) do
-      {:ok, reader, in_format, out_format, sample_rate, bit_rate, duration, codec} ->
+    case Xav.Reader.NIF.new(
+           path,
+           to_int(device?),
+           to_int(read),
+           out_format,
+           out_sample_rate,
+           out_channels
+         ) do
+      {:ok, reader, in_format, out_format, in_sample_rate, out_sample_rate, in_channels,
+       out_channels, bit_rate, duration, codec} ->
         {:ok,
          %__MODULE__{
            reader: reader,
            in_format: in_format,
            out_format: out_format,
-           sample_rate: sample_rate,
+           in_sample_rate: in_sample_rate,
+           out_sample_rate: out_sample_rate,
+           in_channels: in_channels,
+           out_channels: out_channels,
            bit_rate: bit_rate,
            duration: duration,
            codec: to_human_readable(codec)
@@ -80,11 +108,7 @@ defmodule Xav.Reader do
   end
 
   @doc """
-  Reads the next frame.
-
-  A frame is always decoded.
-  Video frames are always in the RGB format.
-  Audio samples are always interleaved.
+  Reads and decodes the next frame.
   """
   @spec next_frame(t()) :: {:ok, Xav.Frame.t()} | {:error, :eof}
   def next_frame(%__MODULE__{reader: reader}) do

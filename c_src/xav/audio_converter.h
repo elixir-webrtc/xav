@@ -10,6 +10,7 @@ struct AudioConverter {
   SwrContext *swr_ctx;
   int64_t in_sample_rate;
   int64_t out_sample_rate;
+  int64_t out_channels;
   struct ChannelLayout out_chlayout;
   enum AVSampleFormat out_sample_fmt;
 };
