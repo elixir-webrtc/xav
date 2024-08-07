@@ -28,9 +28,11 @@ int audio_converter_init(struct AudioConverter *c, struct ChannelLayout in_chlay
 #if LIBAVUTIL_VERSION_MAJOR >= 58
   av_opt_set_chlayout(c->swr_ctx, "in_chlayout", &in_chlayout.layout, 0);
   av_opt_set_chlayout(c->swr_ctx, "out_chlayout", &out_chlayout.layout, 0);
+  c->out_channels = out_chlayout.layout.nb_channels;
 #else
   av_opt_set_channel_layout(c->swr_ctx, "in_channel_layout", in_chlayout.layout, 0);
   av_opt_set_channel_layout(c->swr_ctx, "out_channel_layout", out_chlayout.layout, 0);
+  c->out_channels = av_get_channel_layout_nb_channels(out_chlayout.layout);
 #endif
 
   av_opt_set_int(c->swr_ctx, "in_sample_rate", in_sample_rate, 0);

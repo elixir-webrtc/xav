@@ -3,10 +3,24 @@ defmodule Xav.Frame do
   Audio/video frame.
   """
 
+  @typedoc """
+  Possible audio samples formats.
+  """
+  @type audio_format() :: :u8 | :s16 | :s32 | :s64 | :f32 | :f64
+
+  @typedoc """
+  Possible video frame formats.
+
+  Currently, only RGB is supported.
+  """
+  @type video_format() :: :rgb
+
+  @type format() :: audio_format() | video_format()
+
   @type t() :: %__MODULE__{
           type: :audio | :video,
           data: binary(),
-          format: atom(),
+          format: format(),
           width: non_neg_integer() | nil,
           height: non_neg_integer() | nil,
           samples: integer() | nil,
@@ -23,7 +37,10 @@ defmodule Xav.Frame do
     :pts
   ]
 
-  @spec new(binary(), atom(), non_neg_integer(), non_neg_integer(), integer()) :: t()
+  @doc """
+  Creates a new audio/video frame.
+  """
+  @spec new(binary(), format(), non_neg_integer(), non_neg_integer(), integer()) :: t()
   def new(data, format, width, height, pts) do
     %__MODULE__{
       type: :video,
@@ -35,7 +52,7 @@ defmodule Xav.Frame do
     }
   end
 
-  @spec new(binary(), atom(), integer(), integer()) :: t()
+  @spec new(binary(), format(), integer(), integer()) :: t()
   def new(data, format, samples, pts) do
     %__MODULE__{
       type: :audio,
@@ -47,7 +64,7 @@ defmodule Xav.Frame do
   end
 
   @doc """
-  Converts frame to Nx tensor.
+  Converts a frame to an Nx tensor.
   """
   @spec to_nx(t()) :: Nx.Tensor.t()
   def to_nx(%__MODULE__{type: :video} = frame) do
@@ -57,13 +74,6 @@ defmodule Xav.Frame do
   end
 
   def to_nx(%__MODULE__{type: :audio} = frame) do
-    Nx.from_binary(frame.data, to_nx_format(frame.format))
+    Nx.from_binary(frame.data, frame.format)
   end
-
-  defp to_nx_format(:u8), do: :u8
-  defp to_nx_format(:s16), do: :s16
-  defp to_nx_format(:s32), do: :s32
-  defp to_nx_format(:s64), do: :s64
-  defp to_nx_format(:flt), do: :f32
-  defp to_nx_format(:dbl), do: :f64
 end

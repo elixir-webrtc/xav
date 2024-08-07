@@ -10,19 +10,59 @@ defmodule Xav.Decoder do
 
   @type t() :: reference()
 
+  @typedoc """
+  Opts that can be passed to `new/2`.
+  """
+  @type opts :: [
+          out_format: Xav.Frame.format(),
+          out_sample_rate: integer(),
+          out_channels: integer()
+        ]
+
   @doc """
   Creates a new decoder.
+
+  `opts` can be used to specify desired output parameters.
+
+  E.g. if you want to change audio samples format just pass:
+
+  ```elixir
+  [out_format: :f32]
+  ```
+
+  Video frames are always returned in RGB format.
+  This setting cannot be changed.
+
+  Audio samples are always in the packed form -
+  samples from different channels are interleaved in the same, single binary:
+
+  ```
+  <<c10, c20, c30, c11, c21, c31, c12, c22, c32>>
+  ```
+
+  The way in which samples are interleaved is not specified.
+
+  An alternative would be to return a list of binaries, where
+  each binary represents different channel:
+
+  ```
+  [
+    <<c10, c11, c12, c13, c14>>,
+    <<c20, c21, c22, c23, c24>>,
+    <<c30, c31, c32, c33, c34>>
+  ]
+  ```
   """
-  @spec new(codec()) :: t()
-  def new(codec) do
-    Xav.Decoder.NIF.new(codec)
+  @spec new(codec(), opts()) :: t()
+  def new(codec, opts \\ []) do
+    out_format = opts[:out_format]
+    out_sample_rate = opts[:out_sample_rate] || 0
+    out_channels = opts[:out_channels] || 0
+    Xav.Decoder.NIF.new(codec, out_format, out_sample_rate, out_channels)
   end
 
   @doc """
-  Decodes an audio or video frame.
-
-  Video frames are always in the RGB format.
-  Audio samples are always interleaved.
+  Decodes an audio/video frame.
   """
   @spec decode(t(), binary(), pts: integer(), dts: integer()) ::
           {:ok, Xav.Frame.t()} | {:error, atom()}

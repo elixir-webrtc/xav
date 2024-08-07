@@ -45,13 +45,13 @@ defmodule Xav.ReaderTest do
     for {path, expected_output} <- [
           # This file has been downloaded from https://audio-samples.github.io/
           # Section: Samples from the model without biasing or priming.
-          {"./test/fixtures/melnet_sample_0.mp3",
+          {"./test/fixtures/stt/melnet_sample_0.mp3",
            """
             My thought, I have nobody by a beauty and will as you poured. \
            Mr. Rochester has served and that so don't find a simple and \
            devoted aboud to what might in a\
            """},
-          {"./test/fixtures/harvard.wav",
+          {"./test/fixtures/stt/harvard.wav",
            """
             The stale smell of old beer lingers. It takes heat to bring out the odor. \
            A cold dip restores health in zest. A salt pickle tastes fine with ham. \
@@ -63,7 +63,13 @@ defmodule Xav.ReaderTest do
   end
 
   defp test_speech_to_text(path, expected_output) do
-    reader = Xav.Reader.new!(path, read: :audio)
+    reader =
+      Xav.Reader.new!(path,
+        read: :audio,
+        out_channels: 1,
+        out_format: :f32,
+        out_sample_rate: 16_000
+      )
 
     {:ok, whisper} = Bumblebee.load_model({:hf, "openai/whisper-tiny"})
     {:ok, featurizer} = Bumblebee.load_featurizer({:hf, "openai/whisper-tiny"})
