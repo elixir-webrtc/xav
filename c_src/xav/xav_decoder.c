@@ -102,6 +102,11 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
       decoder_decode(xav_decoder->decoder, xav_decoder->decoder->pkt, xav_decoder->decoder->frame);
   if (ret == -2) {
     return xav_nif_error(env, "no_keyframe");
+  } else if (ret == AVERROR(EAGAIN)) {
+    // Some frames are meant for decoder only
+    // and they don't include actual video samples.
+    decoder_free_frame(xav_decoder->decoder);
+    return enif_make_atom(env, "ok");
   } else if (ret != 0) {
     return xav_nif_raise(env, "failed_to_decode");
   }
