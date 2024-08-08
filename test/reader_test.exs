@@ -43,8 +43,6 @@ defmodule Xav.ReaderTest do
 
   test "speech to text" do
     for {path, expected_output} <- [
-          # This file has been downloaded from https://audio-samples.github.io/
-          # Section: Samples from the model without biasing or priming.
           {"./test/fixtures/stt/melnet_sample_0.mp3",
            """
             My thought, I have nobody by a beauty and will as you poured. \
@@ -52,6 +50,13 @@ defmodule Xav.ReaderTest do
            devoted aboud to what might in a\
            """},
           {"./test/fixtures/stt/harvard.wav",
+           """
+            The stale smell of old beer lingers. It takes heat to bring out the odor. \
+           A cold dip restores health in zest. A salt pickle tastes fine with ham. \
+           Tacos all pastora are my favorite. A zestful food is the hot cross bun.\
+           """},
+          # This mp3 file results in an empty buffer after first conversion.
+          {"./test/fixtures/stt/harvard.mp3",
            """
             The stale smell of old beer lingers. It takes heat to bring out the odor. \
            A cold dip restores health in zest. A salt pickle tastes fine with ham. \

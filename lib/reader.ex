@@ -111,10 +111,15 @@ defmodule Xav.Reader do
   Reads and decodes the next frame.
   """
   @spec next_frame(t()) :: {:ok, Xav.Frame.t()} | {:error, :eof}
-  def next_frame(%__MODULE__{reader: reader}) do
-    case Xav.Reader.NIF.next_frame(reader) do
+  def next_frame(%__MODULE__{reader: ref} = reader) do
+    case Xav.Reader.NIF.next_frame(ref) do
       {:ok, {data, format, width, height, pts}} ->
         {:ok, Xav.Frame.new(data, format, width, height, pts)}
+
+      {:ok, {"", _format, _samples, _pts}} ->
+        # Sometimes, audio converter might not return data immediately.
+        # Hence, call until we succeed.
+        next_frame(reader)
 
       {:ok, {data, format, samples, pts}} ->
         {:ok, Xav.Frame.new(data, format, samples, pts)}

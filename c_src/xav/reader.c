@@ -136,6 +136,7 @@ int reader_next_frame(struct Reader *reader) {
     ret = avcodec_receive_frame(reader->c, reader->frame);
 
     if (ret == 0) {
+      XAV_LOG_DEBUG("Successfully received frame");
       frame_ready = 1;
     } else if (ret == AVERROR_EOF) {
       XAV_LOG_DEBUG("EOF");

@@ -64,9 +64,11 @@ defmodule Xav.Decoder do
   @doc """
   Decodes an audio/video frame.
 
-  Some frames are meant for decoder only and might not
+  Some video frames are meant for decoder only and will not
   contain actual video samples.
-  In such cases, `:ok` term is returned.
+  Some audio frames might require more data to be converted
+  to the desired output format.
+  In both cases, `:ok` term is returned and more data needs to be provided.
   """
   @spec decode(t(), binary(), pts: integer(), dts: integer()) ::
           :ok | {:ok, Xav.Frame.t()} | {:error, atom()}
@@ -80,6 +82,10 @@ defmodule Xav.Decoder do
 
       {:ok, {data, format, width, height, pts}} ->
         {:ok, Xav.Frame.new(data, format, width, height, pts)}
+
+      # Sometimes, audio converter might not return data immediately.
+      {:ok, {"", _format, _samples, _pts}} ->
+        :ok
 
       {:ok, {data, format, samples, pts}} ->
         {:ok, Xav.Frame.new(data, format, samples, pts)}
