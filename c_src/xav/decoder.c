@@ -61,9 +61,12 @@ int decoder_decode(struct Decoder *decoder, AVPacket *pkt, AVFrame *frame) {
 }
 
 void decoder_free_frame(struct Decoder *decoder) {
-  // TODO revisit this
-  av_frame_unref(decoder->frame);
-  av_packet_unref(decoder->pkt);
+  if (decoder->frame != NULL) {
+    av_frame_unref(decoder->frame);
+  }
+  if (decoder->pkt != NULL) {
+    av_packet_unref(decoder->pkt);
+  }
 }
 
 void decoder_free(struct Decoder **decoder) {

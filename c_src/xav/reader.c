@@ -175,7 +175,11 @@ int reader_next_frame(struct Reader *reader) {
   return 0;
 }
 
-void reader_free_frame(struct Reader *reader) { av_frame_unref(reader->frame); }
+void reader_free_frame(struct Reader *reader) {
+  if (reader->frame != NULL) {
+    av_frame_unref(reader->frame);
+  }
+}
 
 void reader_free(struct Reader **reader) {
   XAV_LOG_DEBUG("Freeing Reader object");
