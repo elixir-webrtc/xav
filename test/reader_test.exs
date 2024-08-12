@@ -41,6 +41,8 @@ defmodule Xav.ReaderTest do
     end
   end)
 
+  # This one might take some time on CI
+  @tag timeout: 120_000
   test "speech to text" do
     for {path, expected_output} <- [
           {"./test/fixtures/stt/melnet_sample_0.mp3",
