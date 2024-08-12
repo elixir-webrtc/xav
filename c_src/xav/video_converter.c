@@ -21,8 +21,11 @@ int video_converter_convert(AVFrame *src_frame, uint8_t *out_data[], int out_lin
 
   if (ret < 0) {
     av_freep(&out_data[0]);
+    sws_freeContext(sws_ctx);
     return ret;
   }
+
+  sws_freeContext(sws_ctx);
 
   return ret;
 }
