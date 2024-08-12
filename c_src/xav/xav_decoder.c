@@ -89,7 +89,7 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   }
 
   int dts;
-  if (!enif_get_int(env, argv[3], &pts)) {
+  if (!enif_get_int(env, argv[3], &dts)) {
     return xav_nif_raise(env, "couldnt_get_int");
   }
 
