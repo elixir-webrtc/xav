@@ -40,8 +40,6 @@ defmodule Xav.Decoder do
   <<c10, c20, c30, c11, c21, c31, c12, c22, c32>>
   ```
 
-  The way in which samples are interleaved is not specified.
-
   An alternative would be to return a list of binaries, where
   each binary represents different channel:
 
