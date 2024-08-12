@@ -59,9 +59,6 @@ Kino.Image.new(tensor)
 Speech to text:
 
 ```elixir
-# See https://hexdocs.pm/bumblebee/Bumblebee.Audio.WhisperFeaturizer.html for default sampling rate
-r = Xav.Reader.new!("sample.mp3", read: :audio, out_format: :f32, out_channels: 1, out_sample_rate: 16_000)
-
 {:ok, whisper} = Bumblebee.load_model({:hf, "openai/whisper-tiny"})
 {:ok, featurizer} = Bumblebee.load_featurizer({:hf, "openai/whisper-tiny"})
 {:ok, tokenizer} = Bumblebee.load_tokenizer({:hf, "openai/whisper-tiny"})
@@ -72,12 +69,12 @@ serving =
     defn_options: [compiler: EXLA]
   )
 
-# read a couple of frames
+# Read a couple of frames.
+# See https://hexdocs.pm/bumblebee/Bumblebee.Audio.WhisperFeaturizer.html for default sampling rate.
 frames =
-  for _i <- 0..200 do
-    {:ok, frame} = Xav.Reader.next_frame(r)
-    Xav.Frame.to_nx(frame)
-  end
+    Xav.Reader.stream!("sample.mp3", read: :audio, out_format: :f32, out_channels: 1, out_sample_rate: 16_000)
+    |> Stream.take(200)
+    |> Enum.map(fn frame -> Xav.Reader.to_nx(frame) end)
 
 batch = Nx.Batch.concatenate(frames)
 batch = Nx.Defn.jit_apply(&Function.identity/1, [batch])

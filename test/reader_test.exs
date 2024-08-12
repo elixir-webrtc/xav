@@ -17,6 +17,11 @@ defmodule Xav.ReaderTest do
     for _i <- 0..(30 * 5), do: assert({:ok, %Xav.Frame{}} = Xav.Reader.next_frame(r))
   end
 
+  test "stream!" do
+    Xav.Reader.stream!("./test/fixtures/sample_h264.mp4")
+    |> Enum.all?(fn frame -> is_struct(frame, Xav.Frame) end)
+  end
+
   test "to_nx/1" do
     {:ok, r} = Xav.Reader.new("./test/fixtures/sample_h264.mp4")
     {:ok, frame} = Xav.Reader.next_frame(r)
@@ -70,14 +75,6 @@ defmodule Xav.ReaderTest do
   end
 
   defp test_speech_to_text(path, expected_output) do
-    reader =
-      Xav.Reader.new!(path,
-        read: :audio,
-        out_channels: 1,
-        out_format: :f32,
-        out_sample_rate: 16_000
-      )
-
     {:ok, whisper} = Bumblebee.load_model({:hf, "openai/whisper-tiny"})
     {:ok, featurizer} = Bumblebee.load_featurizer({:hf, "openai/whisper-tiny"})
     {:ok, tokenizer} = Bumblebee.load_tokenizer({:hf, "openai/whisper-tiny"})
@@ -89,7 +86,12 @@ defmodule Xav.ReaderTest do
       )
 
     batch =
-      read_frames(reader)
+      Xav.Reader.stream!(path,
+        read: :audio,
+        out_channels: 1,
+        out_format: :f32,
+        out_sample_rate: 16_000
+      )
       |> Enum.map(&Xav.Frame.to_nx(&1))
       |> Nx.Batch.concatenate()
 
@@ -97,15 +99,5 @@ defmodule Xav.ReaderTest do
     assert %{chunks: chunks} = Nx.Serving.run(serving, batch)
 
     assert [%{text: ^expected_output}] = chunks
-  end
-
-  defp read_frames(reader, acc \\ []) do
-    case Xav.Reader.next_frame(reader) do
-      {:ok, frame} ->
-        read_frames(reader, [frame | acc])
-
-      {:error, :eof} ->
-        Enum.reverse(acc)
-    end
   end
 end

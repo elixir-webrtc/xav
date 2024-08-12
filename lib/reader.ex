@@ -129,6 +129,31 @@ defmodule Xav.Reader do
     end
   end
 
+  @doc """
+  Creates a new reader stream.
+  """
+  @spec stream!(String.t(), opts()) :: Enumerable.t()
+  def stream!(path, opts \\ []) do
+    Stream.resource(
+      fn ->
+        case new(path, opts) do
+          {:ok, reader} ->
+            reader
+
+          {:error, reason} ->
+            raise "Couldn't create a new Xav.Reader stream. Reason: #{inspect(reason)}"
+        end
+      end,
+      fn reader ->
+        case next_frame(reader) do
+          {:ok, frame} -> {[frame], reader}
+          {:error, :eof} -> {:halt, reader}
+        end
+      end,
+      fn _reader -> :ok end
+    )
+  end
+
   defp to_human_readable(:libdav1d), do: :av1
   defp to_human_readable(:mp3float), do: :mp3
   defp to_human_readable(other), do: other
