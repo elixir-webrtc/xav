@@ -1,13 +1,13 @@
 defmodule Xav.MixProject do
   use Mix.Project
 
-  @version "0.4.0"
+  @version "0.5.0"
   @source_url "https://github.com/elixir-webrtc/xav"
 
   def project do
     [
       app: :xav,
-      version: "0.4.0",
+      version: @version,
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       description: "Elixir audio/video library built on top of FFmpeg",
