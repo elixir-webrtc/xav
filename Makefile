@@ -21,6 +21,7 @@ CFLAGS = $(XAV_DEBUG_LOGS) -fPIC -shared
 IFLAGS = -I$(ERTS_INCLUDE_DIR) -I$(XAV_DIR)
 LDFLAGS = -lavcodec -lswscale -lavutil -lavformat -lavdevice -lswresample
 
+# Falgs for MacOS
 ifeq ($(shell uname -s),Darwin)
 	ifeq ($(shell uname -m),arm64)
 		IFLAGS += $$(pkg-config --cflags-only-I libavcodec libswscale libavutil libavformat libavdevice libswresample)
@@ -29,6 +30,12 @@ ifeq ($(shell uname -s),Darwin)
 	else
 		CFLAGS += -undefined dynamic_lookup 
 	endif
+endif
+
+# Flags for Fedora
+ifneq (,$(wildcard /etc/fedora-release))
+	IFLAGS += $$(pkg-config --cflags-only-I libavcodec libswscale libavutil libavformat libavdevice libswresample)
+	LFLAGS += $$(pkg-config --libs-only-L libavcodec libswscale libavutil libavformat libavdevice libswresample)
 endif
 
 all: $(XAV_DECODER_SO) $(XAV_READER_SO)
