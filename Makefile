@@ -20,12 +20,13 @@ READER_SOURCES = $(XAV_DIR)/xav_reader.c $(XAV_DIR)/reader.c $(XAV_DIR)/video_co
 CFLAGS = $(XAV_DEBUG_LOGS) -fPIC -shared
 IFLAGS = -I$(ERTS_INCLUDE_DIR) -I$(XAV_DIR)
 LDFLAGS = -lavcodec -lswscale -lavutil -lavformat -lavdevice -lswresample
+LIBRARIES = libavcodec libswscale libavutil libavformat libavdevice libswresample
 
 # Flags for MacOS
 ifeq ($(shell uname -s),Darwin)
 	ifeq ($(shell uname -m),arm64)
-		IFLAGS += $$(pkg-config --cflags-only-I libavcodec libswscale libavutil libavformat libavdevice libswresample)
-		LFLAGS += $$(pkg-config --libs-only-L libavcodec libswscale libavutil libavformat libavdevice libswresample)
+		IFLAGS += $$(pkg-config --cflags-only-I $(LIBRARIES))
+		LFLAGS += $$(pkg-config --libs-only-L $(LIBRARIES))
 		CFLAGS += -undefined dynamic_lookup
 	else
 		CFLAGS += -undefined dynamic_lookup 
@@ -34,11 +35,11 @@ endif
 
 # Flags for Fedora
 ifneq (,$(wildcard /etc/fedora-release))
-	IFLAGS += $$(pkg-config --cflags-only-I libavcodec libswscale libavutil libavformat libavdevice libswresample)
-	LFLAGS += $$(pkg-config --libs-only-L libavcodec libswscale libavutil libavformat libavdevice libswresample)
+	IFLAGS += $$(pkg-config --cflags-only-I $(LIBRARIES))
+	LFLAGS += $$(pkg-config --libs-only-L $(LIBRARIES))
 endif
 
-all: $(XAV_DECODER_SO) $(XAV_READER_SO)
+all: $(XAV_DECODER_SO) $(XAV_READER_SO) fix_rpath_macos
 
 $(XAV_DECODER_SO): Makefile $(DECODER_SOURCES) $(DECODER_HEADERS)
 	mkdir -p $(PRIV_DIR)
@@ -47,6 +48,18 @@ $(XAV_DECODER_SO): Makefile $(DECODER_SOURCES) $(DECODER_HEADERS)
 $(XAV_READER_SO): Makefile $(READER_SOURCES) $(READER_HEADERS)
 	mkdir -p $(PRIV_DIR)
 	$(CC) $(CFLAGS) $(IFLAGS) $(LFLAGS) $(READER_SOURCES) -o $(XAV_READER_SO) $(LDFLAGS)
+
+fix_rpath_macos:
+ifeq ($(shell uname -s),Darwin)
+	@ lib_dir=$$(pkg-config --libs-only-L $(LIBRARIES) | sed 's/ -L/\n/g' | sed 's/^-L//g') && \
+		for lib in $(XAV_DECODER_SO) $(XAV_READER_SO); do \
+			for rpath in $${lib_dir}; do \
+				if ! otool -l "$${lib}" | grep -q "path $${rpath}"; then \
+					install_name_tool -add_rpath "$${rpath}" "$${lib}" ; \
+				fi ; \
+			done ; \
+		done
+endif
 
 format:
 	clang-format -i $(XAV_DIR)/*
