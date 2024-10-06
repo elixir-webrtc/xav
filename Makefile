@@ -21,7 +21,7 @@ CFLAGS = $(XAV_DEBUG_LOGS) -fPIC -shared
 IFLAGS = -I$(ERTS_INCLUDE_DIR) -I$(XAV_DIR)
 LDFLAGS = -lavcodec -lswscale -lavutil -lavformat -lavdevice -lswresample
 
-# Falgs for MacOS
+# Flags for MacOS
 ifeq ($(shell uname -s),Darwin)
 	ifeq ($(shell uname -m),arm64)
 		IFLAGS += $$(pkg-config --cflags-only-I libavcodec libswscale libavutil libavformat libavdevice libswresample)
