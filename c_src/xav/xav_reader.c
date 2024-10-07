@@ -114,6 +114,8 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     ERL_NIF_TERM out_format_term = enif_make_atom(env, "rgb");
     return enif_make_tuple(env, 7, ok_term, xav_term, in_format_term, out_format_term,
                            bit_rate_term, duration_term, codec_term);
+  } else {
+    return xav_nif_raise(env, "unknown_media_type");
   }
 }
 
