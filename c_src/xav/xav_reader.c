@@ -112,8 +112,12 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     ERL_NIF_TERM in_format_term =
         enif_make_atom(env, av_get_pix_fmt_name(xav_reader->reader->c->pix_fmt));
     ERL_NIF_TERM out_format_term = enif_make_atom(env, "rgb");
-    return enif_make_tuple(env, 7, ok_term, xav_term, in_format_term, out_format_term,
-                           bit_rate_term, duration_term, codec_term);
+    ERL_NIF_TERM framerate_num_term = enif_make_int(env, xav_reader->reader->framerate.num);
+    ERL_NIF_TERM framerate_den_term = enif_make_int(env, xav_reader->reader->framerate.den);
+    ERL_NIF_TERM framerate_term = enif_make_tuple(env, 2, framerate_num_term, framerate_den_term);
+
+    return enif_make_tuple(env, 8, ok_term, xav_term, in_format_term, out_format_term,
+                           bit_rate_term, duration_term, codec_term, framerate_term);
   } else {
     return xav_nif_raise(env, "unknown_media_type");
   }
