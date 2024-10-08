@@ -53,7 +53,7 @@ defmodule Xav.MixProject do
 
   defp deps do
     [
-      {:nx, "~> 0.7.0"},
+      {:nx, "~> 0.7.0", optional: true},
       {:elixir_make, "~> 0.7", runtime: false},
 
       # dev/test
