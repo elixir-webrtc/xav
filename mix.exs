@@ -1,7 +1,7 @@
 defmodule Xav.MixProject do
   use Mix.Project
 
-  @version "0.5.1"
+  @version "0.6.0"
   @source_url "https://github.com/elixir-webrtc/xav"
 
   def project do
@@ -22,7 +22,8 @@ defmodule Xav.MixProject do
       # dialyzer
       dialyzer: [
         plt_local_path: "_dialyzer",
-        plt_core_path: "_dialyzer"
+        plt_core_path: "_dialyzer",
+        plt_add_apps: [:nx]
       ],
 
       # code coverage

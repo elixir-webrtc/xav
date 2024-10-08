@@ -27,3 +27,5 @@ xav-*.tar
 
 .vscode/
 ffmpeg_build/
+.elixir_ls/
+_dialyzer/
