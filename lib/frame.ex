@@ -63,17 +63,19 @@ defmodule Xav.Frame do
     }
   end
 
-  @doc """
-  Converts a frame to an Nx tensor.
-  """
-  @spec to_nx(t()) :: Nx.Tensor.t()
-  def to_nx(%__MODULE__{type: :video} = frame) do
-    frame.data
-    |> Nx.from_binary(:u8)
-    |> Nx.reshape({frame.height, frame.width, 3})
-  end
+  if Code.ensure_loaded?(Nx) do
+    @doc """
+    Converts a frame to an Nx tensor.
+    """
+    @spec to_nx(t()) :: Nx.Tensor.t()
+    def to_nx(%__MODULE__{type: :video} = frame) do
+      frame.data
+      |> Nx.from_binary(:u8)
+      |> Nx.reshape({frame.height, frame.width, 3})
+    end
 
-  def to_nx(%__MODULE__{type: :audio} = frame) do
-    Nx.from_binary(frame.data, frame.format)
+    def to_nx(%__MODULE__{type: :audio} = frame) do
+      Nx.from_binary(frame.data, frame.format)
+    end
   end
 end
