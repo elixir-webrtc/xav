@@ -24,6 +24,7 @@ struct Reader {
   const AVInputFormat *input_format;
   AVDictionary *options;
   enum AVMediaType media_type;
+  AVRational framerate;
 };
 
 struct Reader *reader_alloc();

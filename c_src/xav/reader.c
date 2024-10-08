@@ -58,6 +58,15 @@ int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, in
     return -2;
   }
 
+  AVStream *stream = reader->fmt_ctx->streams[reader->stream_idx];
+
+  // If avg_frame_rate is valid, use it; otherwise, calculate it from time_base.
+  if (stream->avg_frame_rate.num != 0 && stream->avg_frame_rate.den != 0) {
+      reader->framerate = stream->avg_frame_rate;
+  } else {
+      reader->framerate = av_inv_q(stream->time_base);
+  }
+
   // TODO why is this actually needed?
   if (avcodec_parameters_to_context(reader->c,
                                     reader->fmt_ctx->streams[reader->stream_idx]->codecpar) < 0) {
