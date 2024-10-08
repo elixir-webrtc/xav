@@ -190,6 +190,34 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   return xav_nif_ok(env, frame_term);
 }
 
+ERL_NIF_TERM seek_to_time(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  ERL_NIF_TERM frame_term;
+
+  if (argc != 2) {
+    return xav_nif_raise(env, "invalid_arg_count");
+  }
+
+  struct XavReader *xav_reader;
+  if (!enif_get_resource(env, argv[0], xav_reader_resource_type, (void **)&xav_reader)) {
+    return xav_nif_raise(env, "couldnt_get_reader_resource");
+  }
+
+  double time_in_seconds;
+  if (!enif_get_double(env, argv[1], &time_in_seconds)) {
+    return xav_nif_raise(env, "invalid_time_in_seconds");
+  }
+
+  int ret = reader_seek_to_time(xav_reader->reader, time_in_seconds);
+
+  if (ret < 0) {
+    return xav_nif_raise(env, "failed_to_seek");
+  }
+
+  ERL_NIF_TERM xav_term = enif_make_resource(env, xav_reader);
+
+  return xav_nif_ok(env, xav_term);
+}
+
 static int init_audio_converter(struct XavReader *xav_reader) {
   xav_reader->ac = audio_converter_alloc();
 
@@ -274,7 +302,8 @@ void free_xav_reader(ErlNifEnv *env, void *obj) {
 }
 
 static ErlNifFunc xav_funcs[] = {{"new", 6, new},
-                                 {"next_frame", 1, next_frame, ERL_NIF_DIRTY_JOB_CPU_BOUND}};
+                                 {"next_frame", 1, next_frame, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+                                 {"seek_to_time", 2, seek_to_time, ERL_NIF_DIRTY_JOB_CPU_BOUND}};
 
 static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {
 
