@@ -184,6 +184,25 @@ int reader_next_frame(struct Reader *reader) {
   return 0;
 }
 
+int reader_seek_to_time(struct Reader *reader, double time_in_seconds) {
+    int64_t frmseekPos = av_rescale_q(
+        (int64_t)(time_in_seconds * AV_TIME_BASE),
+        AV_TIME_BASE_Q,
+        reader->fmt_ctx->streams[reader->stream_idx]->time_base
+    );
+
+    avcodec_flush_buffers(reader->c);
+
+    if (av_seek_frame(reader->fmt_ctx, reader->stream_idx, frmseekPos, AVSEEK_FLAG_BACKWARD) < 0) {
+        XAV_LOG_DEBUG("Error while seeking to time %f seconds", time_in_seconds);
+        return -1;
+    }
+
+    // Flush buffers again to ensure we're ready for fresh frames
+    avcodec_flush_buffers(reader->c);
+    return 0;
+}
+
 void reader_free_frame(struct Reader *reader) {
   if (reader->frame != NULL) {
     av_frame_unref(reader->frame);

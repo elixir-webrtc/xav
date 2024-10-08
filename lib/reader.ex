@@ -133,6 +133,17 @@ defmodule Xav.Reader do
   end
 
   @doc """
+  Reads and decodes the next frame.
+  """
+  @spec seek!(t(), float()) :: t()
+  def seek!(%__MODULE__{reader: ref} = reader, time_in_seconds) do
+    case Xav.Reader.NIF.seek_to_time(ref, time_in_seconds) do
+      {:ok, ref} ->
+        %{reader | reader: ref}
+    end
+  end
+
+  @doc """
   Creates a new reader stream.
   """
   @spec stream!(String.t(), opts()) :: Enumerable.t()
