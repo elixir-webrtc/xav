@@ -194,11 +194,10 @@ int reader_seek_to_time(struct Reader *reader, double time_in_seconds) {
     avcodec_flush_buffers(reader->c);
 
     if (av_seek_frame(reader->fmt_ctx, reader->stream_idx, frmseekPos, AVSEEK_FLAG_BACKWARD) < 0) {
-        XAV_LOG_DEBUG("Error while seeking to time %f seconds", time_in_seconds);
+        XAV_LOG_DEBUG("Error while seeking to position %f / %f seconds", frmseekPos, time_in_seconds);
         return -1;
     }
 
-    // Flush buffers again to ensure we're ready for fresh frames
     avcodec_flush_buffers(reader->c);
     return 0;
 }

@@ -133,7 +133,7 @@ defmodule Xav.Reader do
   end
 
   @doc """
-  Reads and decodes the next frame.
+  Seeks the reader to the given time in seconds
   """
   @spec seek!(t(), float()) :: t()
   def seek!(%__MODULE__{reader: ref} = reader, time_in_seconds) do
