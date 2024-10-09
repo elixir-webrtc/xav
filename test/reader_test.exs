@@ -28,6 +28,14 @@ defmodule Xav.ReaderTest do
     %Nx.Tensor{} = Xav.Frame.to_nx(frame)
   end
 
+  test "to_image/1" do
+    {:ok, r} = Xav.Reader.new("./test/fixtures/sample_h264.mp4")
+    {:ok, frame} = Xav.Reader.next_frame(r)
+    {:ok, %Vix.Vips.Image{} = image} = Xav.Frame.to_image(frame)
+    assert Image.height(image) == frame.height
+    assert Image.width(image) == frame.width
+  end
+
   test "eof" do
     {:ok, r} = Xav.Reader.new("./test/fixtures/one_frame.mp4")
     {:ok, _frame} = Xav.Reader.next_frame(r)
