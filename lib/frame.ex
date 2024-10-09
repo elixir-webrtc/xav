@@ -78,4 +78,11 @@ defmodule Xav.Frame do
       Nx.from_binary(frame.data, frame.format)
     end
   end
+
+  if Code.ensure_loaded?(Image) or Code.ensure_loaded?(Vix) do
+    @spec to_image(t()) :: {:ok, Vix.Vips.Image.t()} | {:error, term()}
+    def to_image(%__MODULE__{type: :video} = frame) do
+      Vix.Vips.Image.new_from_binary(frame.data, frame.width, frame.height, 3, :VIPS_FORMAT_UCHAR)
+    end
+  end
 end
