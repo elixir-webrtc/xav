@@ -3,7 +3,6 @@
 #include <libavdevice/avdevice.h>
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
-#include <libavutil/imgutils.h>
 #include <libswresample/swresample.h>
 #include <libswscale/swscale.h>
 
@@ -16,10 +15,6 @@
 
 #define XAV_ALLOC(X) enif_alloc(X)
 #define XAV_FREE(X) enif_free(X)
-
-void print_supported_pix_fmts(AVCodec *codec);
-void convert_to_rgb(AVFrame *src_frame, uint8_t *dst_data[], int dst_linesize[]);
-
 ERL_NIF_TERM xav_nif_ok(ErlNifEnv *env, ERL_NIF_TERM data_term);
 ERL_NIF_TERM xav_nif_error(ErlNifEnv *env, char *reason);
 ERL_NIF_TERM xav_nif_raise(ErlNifEnv *env, char *msg);
