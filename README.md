@@ -20,6 +20,8 @@ def deps do
     {:xav, "~> 0.6.0"},
     # Add Nx if you want to have Xav.Frame.to_nx/1
     {:nx, ">= 0.0.0"}
+    # Add Image if you want to have Xav.Frame.to_image/1
+    {:image, ">= 0.0.0"}
   ]
 end
 ```
@@ -31,6 +33,7 @@ Decode
 ```elixir
 decoder = Xav.Decoder.new(:vp8)
 {:ok, %Xav.Frame{} = frame} = Xav.Decoder.decode(decoder, <<"somebinary">>)
+Xav.Frame.to_image(frame)
 ```
 
 Decode with audio resampling
@@ -45,8 +48,7 @@ Read from a file:
 ```elixir
 r = Xav.Reader.new!("./some_mp4_file.mp4")
 {:ok, %Xav.Frame{} = frame} = Xav.Reader.next_frame(r)
-tensor = Xav.Frame.to_nx(frame)
-Kino.Image.new(tensor)
+Xav.Frame.to_image(frame)
 ```
 
 Read from a camera:
@@ -54,8 +56,7 @@ Read from a camera:
 ```elixir
 r = Xav.Reader.new!("/dev/video0", device?: true)
 {:ok, %Xav.Frame{} = frame} = Xav.Reader.next_frame(r)
-tensor = Xav.Frame.to_nx(frame)
-Kino.Image.new(tensor)
+Xav.Frame.to_image(frame)
 ```
 
 Speech to text:
