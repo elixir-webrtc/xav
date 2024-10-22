@@ -76,7 +76,7 @@ serving =
 frames =
     Xav.Reader.stream!("sample.mp3", read: :audio, out_format: :f32, out_channels: 1, out_sample_rate: 16_000)
     |> Stream.take(200)
-    |> Enum.map(fn frame -> Xav.Reader.to_nx(frame) end)
+    |> Enum.map(fn frame -> Xav.Frame.to_nx(frame) end)
 
 batch = Nx.Batch.concatenate(frames)
 batch = Nx.Defn.jit_apply(&Function.identity/1, [batch])
