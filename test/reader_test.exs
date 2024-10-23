@@ -17,9 +17,9 @@ defmodule Xav.ReaderTest do
     for _i <- 0..(30 * 5), do: assert({:ok, %Xav.Frame{}} = Xav.Reader.next_frame(r))
   end
 
-  test "seek!/2" do
+  test "seek/2" do
     {:ok, r} = Xav.Reader.new("./test/fixtures/sample_h264.mp4")
-    r = Xav.Reader.seek!(r, 5.0)
+    assert :ok = Xav.Reader.seek(r, 5.0)
     assert({:ok, %Xav.Frame{}} = Xav.Reader.next_frame(r))
   end
 
