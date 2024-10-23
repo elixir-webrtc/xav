@@ -29,3 +29,5 @@ xav-*.tar
 ffmpeg_build/
 .elixir_ls/
 _dialyzer/
+.cache/
+compile_commands.json

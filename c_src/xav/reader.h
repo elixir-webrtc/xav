@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "audio_converter.h"
 #include "utils.h"
 
 struct Reader {

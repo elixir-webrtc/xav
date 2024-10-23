@@ -82,3 +82,26 @@ batch = Nx.Batch.concatenate(frames)
 batch = Nx.Defn.jit_apply(&Function.identity/1, [batch])
 Nx.Serving.run(serving, batch) 
 ```
+
+## Development
+
+To make `clangd` aware of the header files used in your project, you can create a `compile_commands.json` file. 
+`clangd` uses this file to know the compiler flags, include paths, and other compilation options for each source file. 
+
+### Install bear
+
+The easiest way to generate `compile_commands.json` from a Makefile is to use the `bear` tool. `bear` is a tool that records the compiler calls during a build and creates the `compile_commands.json` file.
+
+You can install `bear` with your package manager:
+
+- __macOS__: brew install bear
+- __Ubuntu/Debian__: sudo apt install bear
+- __Fedora__: sudo dnf install bear
+
+### Generate compile_commands.json
+
+After installing bear, you can run it alongside your make command to capture the necessary information.
+
+```bash
+bear -- mix compile
+```
