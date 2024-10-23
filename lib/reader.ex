@@ -137,10 +137,8 @@ defmodule Xav.Reader do
   """
   @spec seek!(t(), float()) :: t()
   def seek!(%__MODULE__{reader: ref} = reader, time_in_seconds) do
-    case Xav.Reader.NIF.seek_to_time(ref, time_in_seconds) do
-      {:ok, ref} ->
-        %{reader | reader: ref}
-    end
+    Xav.Reader.NIF.seek_to_time(ref, time_in_seconds)
+    reader
   end
 
   @doc """
