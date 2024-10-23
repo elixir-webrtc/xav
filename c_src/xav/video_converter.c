@@ -1,5 +1,4 @@
 #include "video_converter.h"
-#include "utils.h"
 
 int video_converter_convert(AVFrame *src_frame, uint8_t *out_data[], int out_linesize[]) {
   int ret;
