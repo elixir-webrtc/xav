@@ -185,17 +185,38 @@ int reader_next_frame(struct Reader *reader) {
 }
 
 int reader_seek(struct Reader *reader, double time_in_seconds) {
-  int64_t frmseekPos = av_rescale_q((int64_t)(time_in_seconds * AV_TIME_BASE), AV_TIME_BASE_Q,
-                                    reader->fmt_ctx->streams[reader->stream_idx]->time_base);
+  AVRational time_base = reader->fmt_ctx->streams[reader->stream_idx]->time_base;
+  int64_t seek_pos =
+      av_rescale_q((int64_t)(time_in_seconds * AV_TIME_BASE), AV_TIME_BASE_Q, time_base);
 
   avcodec_flush_buffers(reader->c);
 
-  if (av_seek_frame(reader->fmt_ctx, reader->stream_idx, frmseekPos, AVSEEK_FLAG_BACKWARD) < 0) {
-    XAV_LOG_DEBUG("Error while seeking to position %f / %f seconds", frmseekPos, time_in_seconds);
+  if (av_seek_frame(reader->fmt_ctx, reader->stream_idx, seek_pos, AVSEEK_FLAG_BACKWARD) < 0) {
+    XAV_LOG_DEBUG("Error while seeking to position %f / %f seconds", seek_pos, time_in_seconds);
     return -1;
   }
 
-  avcodec_flush_buffers(reader->c);
+  // we have to read frames from the last keyframe until the desired timestamp
+  while (av_read_frame(reader->fmt_ctx, reader->pkt) >= 0) {
+
+    if (reader->pkt->stream_index != reader->stream_idx) {
+      continue;
+    }
+
+    reader->pkt->flags |= AV_PKT_FLAG_DISCARD;
+    int ret = avcodec_send_packet(reader->c, reader->pkt);
+    if (ret < 0) {
+      return ret;
+    }
+
+    int64_t current_pos = reader->pkt->pts != AV_NOPTS_VALUE ? reader->pkt->pts : reader->pkt->dts;
+
+    if (current_pos >= seek_pos) {
+      break;
+    }
+  }
+
+  av_packet_unref(reader->pkt);
   return 0;
 }
 
