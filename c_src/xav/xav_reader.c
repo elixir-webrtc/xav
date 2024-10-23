@@ -210,7 +210,7 @@ ERL_NIF_TERM seek(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   int ret = reader_seek(xav_reader->reader, time_in_seconds);
 
   if (ret < 0) {
-    return xav_nif_error(env, "failed to seek");
+    return xav_nif_raise(env, "failed to seek");
   }
 
   return enif_make_atom(env, "ok");
