@@ -58,6 +58,15 @@ int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, in
     return -2;
   }
 
+  AVStream *stream = reader->fmt_ctx->streams[reader->stream_idx];
+
+  // If avg_frame_rate is valid, use it; otherwise, calculate it from time_base.
+  if (stream->avg_frame_rate.num != 0 && stream->avg_frame_rate.den != 0) {
+      reader->framerate = stream->avg_frame_rate;
+  } else {
+      reader->framerate = av_inv_q(stream->time_base);
+  }
+
   // TODO why is this actually needed?
   if (avcodec_parameters_to_context(reader->c,
                                     reader->fmt_ctx->streams[reader->stream_idx]->codecpar) < 0) {
@@ -173,6 +182,24 @@ int reader_next_frame(struct Reader *reader) {
   }
 
   return 0;
+}
+
+int reader_seek_to_time(struct Reader *reader, double time_in_seconds) {
+    int64_t frmseekPos = av_rescale_q(
+        (int64_t)(time_in_seconds * AV_TIME_BASE),
+        AV_TIME_BASE_Q,
+        reader->fmt_ctx->streams[reader->stream_idx]->time_base
+    );
+
+    avcodec_flush_buffers(reader->c);
+
+    if (av_seek_frame(reader->fmt_ctx, reader->stream_idx, frmseekPos, AVSEEK_FLAG_BACKWARD) < 0) {
+        XAV_LOG_DEBUG("Error while seeking to position %f / %f seconds", frmseekPos, time_in_seconds);
+        return -1;
+    }
+
+    avcodec_flush_buffers(reader->c);
+    return 0;
 }
 
 void reader_free_frame(struct Reader *reader) {
