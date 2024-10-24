@@ -23,6 +23,7 @@ struct Reader {
   const AVInputFormat *input_format;
   AVDictionary *options;
   enum AVMediaType media_type;
+  AVRational framerate;
 };
 
 struct Reader *reader_alloc();
@@ -31,6 +32,8 @@ int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, in
                 enum AVMediaType media_type);
 
 int reader_next_frame(struct Reader *reader);
+
+int reader_seek(struct Reader *reader, double time_in_seconds);
 
 void reader_free_frame(struct Reader *reader);
 

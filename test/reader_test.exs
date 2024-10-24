@@ -17,6 +17,43 @@ defmodule Xav.ReaderTest do
     for _i <- 0..(30 * 5), do: assert({:ok, %Xav.Frame{}} = Xav.Reader.next_frame(r))
   end
 
+  describe "seek/2" do
+    test "works with video" do
+      {:ok, r} = Xav.Reader.new("./test/fixtures/sample_h264.mp4")
+      assert :ok = Xav.Reader.seek(r, 5.0)
+      assert({:ok, %Xav.Frame{}} = Xav.Reader.next_frame(r))
+    end
+
+    test "works with audio" do
+      {:ok, r} = Xav.Reader.new("./test/fixtures/stt/harvard.mp3", read: :audio)
+      assert :ok = Xav.Reader.seek(r, 5.0)
+      assert({:ok, %Xav.Frame{}} = Xav.Reader.next_frame(r))
+    end
+
+    test "negative timestamp just seeks to beginning of file" do
+      {:ok, r} = Xav.Reader.new("./test/fixtures/sample_h264.mp4")
+      assert :ok = Xav.Reader.seek(r, -5.0)
+      assert({:ok, %Xav.Frame{}} = Xav.Reader.next_frame(r))
+    end
+
+    test "timestamp greater than duration" do
+      {:ok, r} = Xav.Reader.new("./test/fixtures/sample_h264.mp4")
+      assert :ok = Xav.Reader.seek(r, (r.duration + 1) * 1.0)
+      assert({:error, :eof} = Xav.Reader.next_frame(r))
+    end
+
+    test "seek back returns same frame" do
+      {:ok, r} = Xav.Reader.new("./test/fixtures/sample_h264.mp4")
+      assert :ok = Xav.Reader.seek(r, 0.0)
+      assert({:ok, %Xav.Frame{} = first} = Xav.Reader.next_frame(r))
+      assert :ok = Xav.Reader.seek(r, 5.0)
+      assert({:ok, %Xav.Frame{}} = Xav.Reader.next_frame(r))
+      assert :ok = Xav.Reader.seek(r, 0.0)
+      assert({:ok, %Xav.Frame{} = other_first} = Xav.Reader.next_frame(r))
+      assert first == other_first
+    end
+  end
+
   test "stream!" do
     Xav.Reader.stream!("./test/fixtures/sample_h264.mp4")
     |> Enum.all?(fn frame -> is_struct(frame, Xav.Frame) end)

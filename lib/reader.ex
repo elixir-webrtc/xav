@@ -28,11 +28,13 @@ defmodule Xav.Reader do
           out_channels: integer() | nil,
           bit_rate: integer(),
           duration: integer(),
-          codec: atom()
+          codec: atom(),
+          framerate: {integer(), integer()} | nil
         }
 
   @enforce_keys [:reader, :in_format, :out_format, :bit_rate, :duration, :codec]
-  defstruct @enforce_keys ++ [:in_sample_rate, :out_sample_rate, :in_channels, :out_channels]
+  defstruct @enforce_keys ++
+              [:in_sample_rate, :out_sample_rate, :in_channels, :out_channels, :framerate]
 
   @doc """
   The same as new/1 but raises on error.
@@ -91,7 +93,7 @@ defmodule Xav.Reader do
            codec: to_human_readable(codec)
          }}
 
-      {:ok, reader, in_format, out_format, bit_rate, duration, codec} ->
+      {:ok, reader, in_format, out_format, bit_rate, duration, codec, framerate} ->
         {:ok,
          %__MODULE__{
            reader: reader,
@@ -99,7 +101,8 @@ defmodule Xav.Reader do
            out_format: out_format,
            bit_rate: bit_rate,
            duration: duration,
-           codec: to_human_readable(codec)
+           codec: to_human_readable(codec),
+           framerate: framerate
          }}
 
       {:error, _reason} = err ->
@@ -127,6 +130,14 @@ defmodule Xav.Reader do
       {:error, :eof} = err ->
         err
     end
+  end
+
+  @doc """
+  Seeks the reader to the given time in seconds
+  """
+  @spec seek(t(), float()) :: :ok | {:error, term()}
+  def seek(%__MODULE__{reader: ref}, time_in_seconds) do
+    Xav.Reader.NIF.seek(ref, time_in_seconds)
   end
 
   @doc """
