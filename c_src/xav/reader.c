@@ -186,6 +186,11 @@ int reader_next_frame(struct Reader *reader) {
 
 int reader_seek(struct Reader *reader, double time_in_seconds) {
   AVRational time_base = reader->fmt_ctx->streams[reader->stream_idx]->time_base;
+
+  // keep floating time precision by multiplying with the internal AV_TIME_BASE (1_000_000)
+  // and convert to the same time_base for the stream we're using in `av_seek_frame` because we're
+  // explicitly specifying the stream index. for further information, see param docs in
+  // [`av_seek_frame`](https://ffmpeg.org/doxygen/7.0/group__lavf__decoding.html#gaa23f7619d8d4ea0857065d9979c75ac8)
   int64_t seek_pos =
       av_rescale_q((int64_t)(time_in_seconds * AV_TIME_BASE), AV_TIME_BASE_Q, time_base);
 
