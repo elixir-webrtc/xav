@@ -96,7 +96,7 @@ defmodule Xav.Decoder do
   @doc """
   Flush the decoder.
 
-  Flushing signales end of stream and force the decoder to return
+  Flushing signals end of stream and force the decoder to return
   the buffered frames if there's any.
   """
   @spec flush(t()) :: {:ok, [Xav.Frame.t()]} | {:error, atom()}
