@@ -6,7 +6,7 @@ defmodule Xav.Decoder do
   @typedoc """
   Supported codecs.
   """
-  @type codec() :: :opus | :vp8
+  @type codec() :: :opus | :vp8 | :h264 | :h265
 
   @type t() :: reference()
 
