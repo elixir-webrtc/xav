@@ -286,6 +286,9 @@ defmodule Xav.DecoderTest do
                 142, 204, 5, 106, 217, 175, 162, 62, 128, 161, 69, 136, 234, 30, 43, 165, 152,
                 104, 143>>
 
+  @h264_frame File.read!("test/fixtures/decoder/sample_h264.h264")
+  @h265_frame File.read!("test/fixtures/decoder/sample_h265.h265")
+
   test "new/0" do
     assert decoder = Xav.Decoder.new(:vp8)
     assert is_reference(decoder)
@@ -328,6 +331,24 @@ defmodule Xav.DecoderTest do
       decoder = Xav.Decoder.new(:vp8)
 
       assert {:error, :no_keyframe} = Xav.Decoder.decode(decoder, @vp8_frame)
+    end
+
+    test "h264 video" do
+      decoder = Xav.Decoder.new(:h264)
+
+      assert :ok = Xav.Decoder.decode(decoder, @h264_frame)
+
+      assert {:ok, [%Xav.Frame{width: 1280, height: 720, pts: 0, format: :rgb}]} =
+               Xav.Decoder.flush(decoder)
+    end
+
+    test "h265 video" do
+      decoder = Xav.Decoder.new(:h265)
+
+      assert :ok = Xav.Decoder.decode(decoder, @h265_frame)
+
+      assert {:ok, [%Xav.Frame{width: 1920, height: 1080, pts: 0, format: :rgb}]} =
+               Xav.Decoder.flush(decoder)
     end
   end
 end
