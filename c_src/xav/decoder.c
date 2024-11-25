@@ -20,6 +20,12 @@ int decoder_init(struct Decoder *decoder, const char *codec) {
   } else if (strcmp(codec, "vp8") == 0) {
     decoder->media_type = AVMEDIA_TYPE_VIDEO;
     decoder->codec = avcodec_find_decoder(AV_CODEC_ID_VP8);
+  } else if (strcmp(codec, "h264") == 0) {
+    decoder->media_type = AVMEDIA_TYPE_VIDEO;
+    decoder->codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+  } else if (strcmp(codec, "h265") == 0) {
+    decoder->media_type = AVMEDIA_TYPE_VIDEO;
+    decoder->codec = avcodec_find_decoder(AV_CODEC_ID_H265);
   } else {
     return -1;
   }
@@ -58,6 +64,26 @@ int decoder_decode(struct Decoder *decoder, AVPacket *pkt, AVFrame *frame) {
   }
 
   return avcodec_receive_frame(decoder->c, frame);
+}
+
+int decoder_flush(struct Decoder *decoder, AVFrame **frames, int *frames_count) { 
+  int ret = avcodec_send_packet(decoder->c, NULL);
+  if (ret != 0) {
+    return ret;
+  }
+
+  while (1) {
+    ret = avcodec_receive_frame(decoder->c, frames[*frames_count]);
+    if (ret == AVERROR_EOF) {
+      break;
+    } else if (ret < 0) {
+      return ret;
+    }
+
+    *frames_count += 1;
+  }
+
+  return 0;
 }
 
 void decoder_free_frame(struct Decoder *decoder) {

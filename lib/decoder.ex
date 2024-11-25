@@ -6,7 +6,7 @@ defmodule Xav.Decoder do
   @typedoc """
   Supported codecs.
   """
-  @type codec() :: :opus | :vp8
+  @type codec() :: :opus | :vp8 | :h264 | :h265
 
   @type t() :: reference()
 
@@ -90,6 +90,34 @@ defmodule Xav.Decoder do
 
       {:error, _reason} = error ->
         error
+    end
+  end
+
+  @doc """
+  Flush the decoder.
+
+  Flushing signals end of stream and force the decoder to return
+  the buffered frames if there's any.
+  """
+  @spec flush(t()) :: {:ok, [Xav.Frame.t()]} | {:error, atom()}
+  def flush(decoder) do
+    with {:ok, frames} <- Xav.Decoder.NIF.flush(decoder) do
+      frames =
+        Enum.map(frames, fn {data, format, width, height, pts} ->
+          Xav.Frame.new(data, format, width, height, pts)
+        end)
+
+      {:ok, frames}
+    end
+  end
+
+  @doc """
+  Same as `flush/1` but raises an exception on error.
+  """
+  def flush!(decoder) do
+    case flush(decoder) do
+      {:ok, frames} -> frames
+      {:error, reason} -> raise "Failed to flush decoder: #{inspect(reason)}"
     end
   end
 end

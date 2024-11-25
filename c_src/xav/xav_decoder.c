@@ -6,6 +6,12 @@ ErlNifResourceType *xav_decoder_resource_type;
 
 static int init_audio_converter(struct XavDecoder *xav_decoder);
 
+void free_frames(AVFrame **frames, int size) {
+  for (int i = 0; i < size; i++) {
+    av_frame_unref(frames[i]);
+  }
+}
+
 ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   if (argc != 4) {
     return xav_nif_raise(env, "invalid_arg_count");
@@ -66,6 +72,59 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   return decoder_term;
 }
 
+ERL_NIF_TERM convert(ErlNifEnv *env, struct XavDecoder *xav_decoder, AVFrame* frame) {
+  ERL_NIF_TERM frame_term;
+  int ret;
+
+  if (xav_decoder->decoder->media_type == AVMEDIA_TYPE_VIDEO) {
+    XAV_LOG_DEBUG("Converting video to RGB");
+
+    uint8_t *out_data[4];
+    int out_linesize[4];
+
+    ret = video_converter_convert(frame, out_data, out_linesize);
+    if (ret <= 0) {
+      return xav_nif_raise(env, "failed_to_decode");
+    }
+
+    frame_term = xav_nif_video_frame_to_term(env, frame, out_data, out_linesize, "rgb");
+
+    av_freep(&out_data[0]);
+  } else if (xav_decoder->decoder->media_type == AVMEDIA_TYPE_AUDIO) {
+    XAV_LOG_DEBUG("Converting audio to desired out format");
+
+    uint8_t **out_data;
+    int out_samples;
+    int out_size;
+
+    if (xav_decoder->ac == NULL) {
+      ret = init_audio_converter(xav_decoder);
+      if (ret < 0) {
+        return xav_nif_raise(env, "failed_to_init_converter");;
+      }
+    }
+
+    ret = audio_converter_convert(xav_decoder->ac, frame, &out_data, &out_samples, &out_size);
+    if (ret < 0) {
+      return xav_nif_raise(env, "failed_to_decode");
+    }
+
+    const char *out_format = av_get_sample_fmt_name(xav_decoder->ac->out_sample_fmt);
+
+    if (strcmp(out_format, "flt") == 0) {
+      out_format = "f32";
+    } else if (strcmp(out_format, "dbl") == 0) {
+      out_format = "f64";
+    }
+
+    frame_term = xav_nif_audio_frame_to_term(env, out_data, out_samples, out_size, out_format, frame->pts);
+
+    av_freep(&out_data[0]);
+  }
+
+  return frame_term;
+}
+
 ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   ERL_NIF_TERM frame_term;
 
@@ -111,59 +170,44 @@ ERL_NIF_TERM decode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "failed_to_decode");
   }
 
-  // convert
-  if (xav_decoder->decoder->media_type == AVMEDIA_TYPE_VIDEO) {
-    XAV_LOG_DEBUG("Converting video to RGB");
-
-    uint8_t *out_data[4];
-    int out_linesize[4];
-
-    ret = video_converter_convert(xav_decoder->decoder->frame, out_data, out_linesize);
-    if (ret <= 0) {
-      return xav_nif_raise(env, "failed_to_decode");
-    }
-
-    frame_term = xav_nif_video_frame_to_term(env, xav_decoder->decoder->frame, out_data,
-                                             out_linesize, "rgb");
-
-    av_freep(&out_data[0]);
-  } else if (xav_decoder->decoder->media_type == AVMEDIA_TYPE_AUDIO) {
-    XAV_LOG_DEBUG("Converting audio to desired out format");
-
-    uint8_t **out_data;
-    int out_samples;
-    int out_size;
-
-    if (xav_decoder->ac == NULL) {
-      ret = init_audio_converter(xav_decoder);
-      if (ret < 0) {
-        return ret;
-      }
-    }
-
-    ret = audio_converter_convert(xav_decoder->ac, xav_decoder->decoder->frame, &out_data,
-                                  &out_samples, &out_size);
-    if (ret < 0) {
-      return xav_nif_raise(env, "failed_to_decode");
-    }
-
-    const char *out_format = av_get_sample_fmt_name(xav_decoder->ac->out_sample_fmt);
-
-    if (strcmp(out_format, "flt") == 0) {
-      out_format = "f32";
-    } else if (strcmp(out_format, "dbl") == 0) {
-      out_format = "f64";
-    }
-
-    frame_term = xav_nif_audio_frame_to_term(env, out_data, out_samples, out_size, out_format,
-                                             xav_decoder->decoder->frame->pts);
-
-    av_freep(&out_data[0]);
-  }
+  frame_term = convert(env, xav_decoder, xav_decoder->decoder->frame);
 
   decoder_free_frame(xav_decoder->decoder);
 
   return xav_nif_ok(env, frame_term);
+}
+
+ERL_NIF_TERM flush(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  if (argc != 1) {
+    return xav_nif_raise(env, "invalid_arg_count");
+  }
+
+  struct XavDecoder *xav_decoder;
+  if (!enif_get_resource(env, argv[0], xav_decoder_resource_type, (void **)&xav_decoder)) {
+    return xav_nif_raise(env, "couldnt_get_decoder_resource");
+  }
+
+  AVFrame *frames[MAX_FLUSH_BUFFER];
+  int frames_count = 0;
+
+  for (int i = 0; i < MAX_FLUSH_BUFFER; i++) {
+    frames[i] = av_frame_alloc();
+  }
+
+  int ret = decoder_flush(xav_decoder->decoder, frames, &frames_count);
+  if (ret < 0) {
+    free_frames(frames, MAX_FLUSH_BUFFER);
+    return xav_nif_error(env, "failed_to_flush");
+  }
+
+  ERL_NIF_TERM frame_terms[frames_count];
+  for (int i = 0; i < frames_count; i++) {
+    frame_terms[i] = convert(env, xav_decoder, frames[i]);
+  }
+
+  free_frames(frames, MAX_FLUSH_BUFFER);
+
+  return xav_nif_ok(env, enif_make_list_from_array(env, frame_terms, frames_count));
 }
 
 static int init_audio_converter(struct XavDecoder *xav_decoder) {
@@ -235,7 +279,8 @@ void free_xav_decoder(ErlNifEnv *env, void *obj) {
 }
 
 static ErlNifFunc xav_funcs[] = {{"new", 4, new},
-                                 {"decode", 4, decode, ERL_NIF_DIRTY_JOB_CPU_BOUND}};
+                                 {"decode", 4, decode, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+                                 {"flush", 1, flush, ERL_NIF_DIRTY_JOB_CPU_BOUND}};
 
 static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {
   xav_decoder_resource_type =

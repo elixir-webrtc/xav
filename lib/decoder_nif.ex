@@ -11,4 +11,6 @@ defmodule Xav.Decoder.NIF do
   def new(_codec, _out_format, _out_sample_rate, _out_channels), do: :erlang.nif_error(:undef)
 
   def decode(_decoder, _data, _pts, _dts), do: :erlang.nif_error(:undef)
+
+  def flush(_decoder), do: :erlang.nif_error(:undef)
 end
