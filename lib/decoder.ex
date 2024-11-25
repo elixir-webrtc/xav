@@ -94,10 +94,10 @@ defmodule Xav.Decoder do
   end
 
   @doc """
-  Flush the decoder.
+  Flushes the decoder.
 
-  Flushing signals end of stream and force the decoder to return
-  the buffered frames if there's any.
+  Flushing signals end of stream and forces the decoder to return
+  the buffered frames if there're any.
   """
   @spec flush(t()) :: {:ok, [Xav.Frame.t()]} | {:error, atom()}
   def flush(decoder) do
