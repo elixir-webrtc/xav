@@ -66,6 +66,8 @@ defmodule Xav.Frame do
   if Code.ensure_loaded?(Nx) do
     @doc """
     Converts a frame to an Nx tensor.
+
+    In case of a video frame, dimension names of the newly created tensor are `[:height, :width, :channels]`.
     """
     @spec to_nx(t()) :: Nx.Tensor.t()
     def to_nx(%__MODULE__{type: :video} = frame) do
