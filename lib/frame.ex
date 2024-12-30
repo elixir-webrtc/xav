@@ -71,7 +71,7 @@ defmodule Xav.Frame do
     def to_nx(%__MODULE__{type: :video} = frame) do
       frame.data
       |> Nx.from_binary(:u8)
-      |> Nx.reshape({frame.height, frame.width, 3})
+      |> Nx.reshape({frame.height, frame.width, 3}, names: [:height, :width, :channels])
     end
 
     def to_nx(%__MODULE__{type: :audio} = frame) do
