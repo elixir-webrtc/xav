@@ -287,10 +287,10 @@ defmodule Xav.DecoderTest do
                 104, 143>>
 
   # Use ffmpeg to extract the first frame of the video
-  # ffmpeg -i sample_video.mp4 -c:copy -f h264 -vframes 1 sample_h264.h264
+  # ffmpeg -i sample_video.mp4 -c:v copy -f h264 -vframes 1 sample_h264.h264
   @h264_frame File.read!("test/fixtures/decoder/sample_h264.h264")
   # You can do the same for hevc given that the mp4 file contains a hevc stream
-  # ffmpeg -i sample_video.mp4 -c:copy -f hevc -vframes 1 sample_h265.h265
+  # ffmpeg -i sample_video.mp4 -c:v copy -f hevc -vframes 1 sample_h265.h265
   @h265_frame File.read!("test/fixtures/decoder/sample_h265.h265")
 
   test "new/0" do
