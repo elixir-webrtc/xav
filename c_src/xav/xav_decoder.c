@@ -17,28 +17,61 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "invalid_arg_count");
   }
 
+  // resolve codec
   unsigned int codec_len;
   if (!enif_get_atom_length(env, argv[0], &codec_len, ERL_NIF_LATIN1)) {
     return xav_nif_raise(env, "failed_to_get_atom_length");
   }
 
   char *codec = (char *)XAV_ALLOC((codec_len + 1) * sizeof(char *));
-
   if (enif_get_atom(env, argv[0], codec, codec_len + 1, ERL_NIF_LATIN1) == 0) {
     return xav_nif_raise(env, "failed_to_get_atom");
   }
 
+  enum AVMediaType media_type;
+  enum AVCodecID codec_id;
+  if (strcmp(codec, "opus") == 0) {
+    media_type = AVMEDIA_TYPE_AUDIO;
+    codec_id = AV_CODEC_ID_OPUS;
+  } else if (strcmp(codec, "vp8") == 0) {
+    media_type = AVMEDIA_TYPE_VIDEO;
+    codec_id = AV_CODEC_ID_VP8;
+  } else if (strcmp(codec, "h264") == 0) {
+    media_type = AVMEDIA_TYPE_VIDEO;
+    codec_id = AV_CODEC_ID_H264;
+  } else if (strcmp(codec, "h265") == 0) {
+    media_type = AVMEDIA_TYPE_VIDEO;
+    codec_id = AV_CODEC_ID_HEVC;
+  } else {
+    return xav_nif_raise(env, "failed_to_resolve_codec");
+  }
+
+  // resolve output format
   unsigned int out_format_len;
   if (!enif_get_atom_length(env, argv[1], &out_format_len, ERL_NIF_LATIN1)) {
     return xav_nif_raise(env, "failed_to_get_atom_length");
   }
 
   char *out_format = (char *)XAV_ALLOC((out_format_len + 1) * sizeof(char *));
-
   if (enif_get_atom(env, argv[1], out_format, out_format_len + 1, ERL_NIF_LATIN1) == 0) {
     return xav_nif_raise(env, "failed_to_get_atom");
   }
 
+  enum AVPixelFormat out_video_fmt = AV_PIX_FMT_NONE;
+  enum AVSampleFormat out_audo_fmt = AV_SAMPLE_FMT_NONE;
+  if (media_type == AVMEDIA_TYPE_VIDEO && strcmp(out_format, "nil") != 0) {
+    out_video_fmt = av_get_pix_fmt(out_format);
+    if (out_video_fmt == AV_PIX_FMT_NONE) {
+      return xav_nif_raise(env, "unknown_out_format");
+    }
+  } else if (media_type == AVMEDIA_TYPE_AUDIO && strcmp(out_format, "nil") != 0) {
+    out_audo_fmt = av_get_sample_fmt(out_format);
+    if (out_audo_fmt == AV_SAMPLE_FMT_NONE) {
+      return xav_nif_raise(env, "unknown_out_format");
+    }
+  }
+
+  // resolve other params
   int out_sample_rate;
   if (!enif_get_int(env, argv[2], &out_sample_rate)) {
     return xav_nif_raise(env, "invalid_out_sample_rate");
@@ -53,7 +86,8 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
       enif_alloc_resource(xav_decoder_resource_type, sizeof(struct XavDecoder));
   xav_decoder->decoder = NULL;
   xav_decoder->ac = NULL;
-  xav_decoder->out_format = out_format;
+  xav_decoder->out_audio_fmt = out_audo_fmt;
+  xav_decoder->out_video_fmt = out_video_fmt;
   xav_decoder->out_sample_rate = out_sample_rate;
   xav_decoder->out_channels = out_channels;
 
@@ -62,31 +96,31 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "failed_to_allocate_decoder");
   }
 
-  if (decoder_init(xav_decoder->decoder, codec, xav_decoder->out_format) != 0) {
+  if (decoder_init(xav_decoder->decoder, media_type, codec_id) != 0) {
     return xav_nif_raise(env, "failed_to_init_decoder");
   }
 
   ERL_NIF_TERM decoder_term = enif_make_resource(env, xav_decoder);
   enif_release_resource(xav_decoder);
 
+  XAV_FREE(out_format);
+
   return decoder_term;
 }
 
-ERL_NIF_TERM convert(ErlNifEnv *env, struct XavDecoder *xav_decoder, AVFrame* frame) {
+ERL_NIF_TERM convert(ErlNifEnv *env, struct XavDecoder *xav_decoder, AVFrame *frame) {
   ERL_NIF_TERM frame_term;
   int ret;
 
   if (xav_decoder->decoder->media_type == AVMEDIA_TYPE_VIDEO) {
     XAV_LOG_DEBUG("Converting video to RGB");
 
-    int out_pix_fmt = xav_decoder->decoder->out_format;
-
-    if (out_pix_fmt == AV_PIX_FMT_NONE) {
+    if (xav_decoder->out_video_fmt == AV_PIX_FMT_NONE) {
       return xav_nif_video_frame_to_term(env, frame);
     }
 
     AVFrame *dst_frame;
-    ret = video_converter_convert(frame, &dst_frame, out_pix_fmt);
+    ret = video_converter_convert(frame, &dst_frame, xav_decoder->out_video_fmt);
     if (ret <= 0) {
       return xav_nif_raise(env, "failed_to_decode");
     }
@@ -104,7 +138,7 @@ ERL_NIF_TERM convert(ErlNifEnv *env, struct XavDecoder *xav_decoder, AVFrame* fr
     if (xav_decoder->ac == NULL) {
       ret = init_audio_converter(xav_decoder);
       if (ret < 0) {
-        return xav_nif_raise(env, "failed_to_init_converter");;
+        return xav_nif_raise(env, "failed_to_init_converter");
       }
     }
 
@@ -113,15 +147,8 @@ ERL_NIF_TERM convert(ErlNifEnv *env, struct XavDecoder *xav_decoder, AVFrame* fr
       return xav_nif_raise(env, "failed_to_decode");
     }
 
-    const char *out_format = av_get_sample_fmt_name(xav_decoder->ac->out_sample_fmt);
-
-    if (strcmp(out_format, "flt") == 0) {
-      out_format = "f32";
-    } else if (strcmp(out_format, "dbl") == 0) {
-      out_format = "f64";
-    }
-
-    frame_term = xav_nif_audio_frame_to_term(env, out_data, out_samples, out_size, out_format, frame->pts);
+    frame_term = xav_nif_audio_frame_to_term(env, out_data, out_samples, out_size,
+                                             xav_decoder->out_audio_fmt, frame->pts);
 
     av_freep(&out_data[0]);
   }
@@ -229,23 +256,12 @@ static int init_audio_converter(struct XavDecoder *xav_decoder) {
     out_sample_rate = xav_decoder->out_sample_rate;
   }
 
-  enum AVSampleFormat out_sample_fmt;
-  if (strcmp(xav_decoder->out_format, "u8") == 0) {
-    out_sample_fmt = AV_SAMPLE_FMT_U8;
-  } else if (strcmp(xav_decoder->out_format, "s16") == 0) {
-    out_sample_fmt = AV_SAMPLE_FMT_S16;
-  } else if (strcmp(xav_decoder->out_format, "s32") == 0) {
-    out_sample_fmt = AV_SAMPLE_FMT_S32;
-  } else if (strcmp(xav_decoder->out_format, "s64") == 0) {
-    out_sample_fmt = AV_SAMPLE_FMT_S64;
-  } else if (strcmp(xav_decoder->out_format, "f32") == 0) {
-    out_sample_fmt = AV_SAMPLE_FMT_FLT;
-  } else if (strcmp(xav_decoder->out_format, "f64") == 0) {
-    out_sample_fmt = AV_SAMPLE_FMT_DBL;
-  } else if (strcmp(xav_decoder->out_format, "nil") == 0) {
-    out_sample_fmt = av_get_alt_sample_fmt(xav_decoder->decoder->c->sample_fmt, 0);
-  } else {
-    return -1;
+  // If user didn't request any specific format,
+  // just take the original format but in the packed form.
+  // We need to call this function here, as in the decoder_init we don't know
+  // what is the sample_fmt yet.
+  if (xav_decoder->out_audio_fmt == AV_SAMPLE_FMT_NONE) {
+    xav_decoder->out_audio_fmt = av_get_alt_sample_fmt(xav_decoder->decoder->c->sample_fmt, 0);
   }
 
   struct ChannelLayout in_chlayout, out_chlayout;
@@ -267,7 +283,7 @@ static int init_audio_converter(struct XavDecoder *xav_decoder) {
 
   return audio_converter_init(xav_decoder->ac, in_chlayout, xav_decoder->decoder->c->sample_rate,
                               xav_decoder->decoder->c->sample_fmt, out_chlayout, out_sample_rate,
-                              out_sample_fmt);
+                              xav_decoder->out_audio_fmt);
 }
 
 void free_xav_decoder(ErlNifEnv *env, void *obj) {

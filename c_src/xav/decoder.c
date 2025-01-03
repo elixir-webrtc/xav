@@ -9,37 +9,16 @@ struct Decoder *decoder_alloc() {
 
   decoder->codec = NULL;
   decoder->c = NULL;
-  decoder->out_format = AV_PIX_FMT_NONE;
 
   return decoder;
 }
 
-int decoder_init(struct Decoder *decoder, const char *codec, const char* out_format) {
-  if (strcmp(codec, "opus") == 0) {
-    decoder->media_type = AVMEDIA_TYPE_AUDIO;
-    decoder->codec = avcodec_find_decoder(AV_CODEC_ID_OPUS);
-  } else if (strcmp(codec, "vp8") == 0) {
-    decoder->media_type = AVMEDIA_TYPE_VIDEO;
-    decoder->codec = avcodec_find_decoder(AV_CODEC_ID_VP8);
-  } else if (strcmp(codec, "h264") == 0) {
-    decoder->media_type = AVMEDIA_TYPE_VIDEO;
-    decoder->codec = avcodec_find_decoder(AV_CODEC_ID_H264);
-  } else if (strcmp(codec, "h265") == 0) {
-    decoder->media_type = AVMEDIA_TYPE_VIDEO;
-    decoder->codec = avcodec_find_decoder(AV_CODEC_ID_HEVC);
-  } else {
-    return -1;
-  }
+int decoder_init(struct Decoder *decoder, enum AVMediaType media_type, enum AVCodecID codec_id) {
+  decoder->media_type = media_type;
+  decoder->codec = avcodec_find_decoder(codec_id);
 
   if (!decoder->codec) {
     return -1;
-  }
-
-  if(decoder->media_type == AVMEDIA_TYPE_VIDEO && strcmp(out_format, "nil") != 0) {
-    decoder->out_format = av_get_pix_fmt(out_format);
-    if (decoder->out_format == AV_PIX_FMT_NONE) {
-      return -1;
-    }
   }
 
   decoder->c = avcodec_alloc_context3(decoder->codec);
@@ -74,7 +53,7 @@ int decoder_decode(struct Decoder *decoder, AVPacket *pkt, AVFrame *frame) {
   return avcodec_receive_frame(decoder->c, frame);
 }
 
-int decoder_flush(struct Decoder *decoder, AVFrame **frames, int *frames_count) { 
+int decoder_flush(struct Decoder *decoder, AVFrame **frames, int *frames_count) {
   int ret = avcodec_send_packet(decoder->c, NULL);
   if (ret != 0) {
     return ret;

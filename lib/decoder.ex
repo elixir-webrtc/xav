@@ -82,6 +82,7 @@ defmodule Xav.Decoder do
         :ok
 
       {:ok, {data, format, width, height, pts}} ->
+        format = normalize_format(format)
         {:ok, Xav.Frame.new(data, format, width, height, pts)}
 
       # Sometimes, audio converter might not return data immediately.
@@ -89,6 +90,7 @@ defmodule Xav.Decoder do
         :ok
 
       {:ok, {data, format, samples, pts}} ->
+        format = normalize_format(format)
         {:ok, Xav.Frame.new(data, format, samples, pts)}
 
       {:error, _reason} = error ->
@@ -123,4 +125,9 @@ defmodule Xav.Decoder do
       {:error, reason} -> raise "Failed to flush decoder: #{inspect(reason)}"
     end
   end
+
+  # Use the same formats as Nx
+  defp normalize_format(:flt), do: :f32
+  defp normalize_format(:dbl), do: :f64
+  defp normalize_format(other), do: other
 end

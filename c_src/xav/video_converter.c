@@ -1,6 +1,7 @@
 #include "video_converter.h"
 
-int video_converter_convert(AVFrame *src_frame, AVFrame **dst_frame, enum AVPixelFormat out_format) {
+int video_converter_convert(AVFrame *src_frame, AVFrame **dst_frame,
+                            enum AVPixelFormat out_format) {
   int ret;
 
   *dst_frame = av_frame_alloc();
@@ -25,7 +26,6 @@ int video_converter_convert(AVFrame *src_frame, AVFrame **dst_frame, enum AVPixe
   if (ret < 0) {
     return ret;
   }
-
 
   // is this (const uint8_t * const*) cast really correct?
   ret = sws_scale(sws_ctx, (const uint8_t *const *)src_frame->data, src_frame->linesize, 0,

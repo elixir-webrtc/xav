@@ -117,6 +117,7 @@ defmodule Xav.Reader do
   def next_frame(%__MODULE__{reader: ref} = reader) do
     case Xav.Reader.NIF.next_frame(ref) do
       {:ok, {data, format, width, height, pts}} ->
+        format = normalize_format(format)
         {:ok, Xav.Frame.new(data, format, width, height, pts)}
 
       {:ok, {"", _format, _samples, _pts}} ->
@@ -125,6 +126,7 @@ defmodule Xav.Reader do
         next_frame(reader)
 
       {:ok, {data, format, samples, pts}} ->
+        format = normalize_format(format)
         {:ok, Xav.Frame.new(data, format, samples, pts)}
 
       {:error, :eof} = err ->
@@ -173,4 +175,9 @@ defmodule Xav.Reader do
   defp to_int(:audio), do: 0
   defp to_int(true), do: 1
   defp to_int(false), do: 0
+
+  # Use the same formats as Nx
+  defp normalize_format(:flt), do: :f32
+  defp normalize_format(:dbl), do: :f64
+  defp normalize_format(other), do: other
 end

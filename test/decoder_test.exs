@@ -366,5 +366,4 @@ defmodule Xav.DecoderTest do
       assert byte_size(frame) == 640 * 480 * 3
     end
   end
-  end
 end

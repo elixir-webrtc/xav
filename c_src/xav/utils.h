@@ -20,4 +20,4 @@ ERL_NIF_TERM xav_nif_error(ErlNifEnv *env, char *reason);
 ERL_NIF_TERM xav_nif_raise(ErlNifEnv *env, char *msg);
 ERL_NIF_TERM xav_nif_video_frame_to_term(ErlNifEnv *env, AVFrame *frame);
 ERL_NIF_TERM xav_nif_audio_frame_to_term(ErlNifEnv *env, uint8_t **out_data, int out_samples,
-                                         int out_size, const char *out_format, int pts);
+                                         int out_size, enum AVSampleFormat out_format, int pts);

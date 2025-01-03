@@ -169,16 +169,9 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
       return xav_nif_raise(env, "failed_to_read");
     }
 
-    const char *out_format = av_get_sample_fmt_name(xav_reader->ac->out_sample_fmt);
-
-    if (strcmp(out_format, "flt") == 0) {
-      out_format = "f32";
-    } else if (strcmp(out_format, "dbl") == 0) {
-      out_format = "f64";
-    }
-
-    frame_term = xav_nif_audio_frame_to_term(env, out_data, out_samples, out_size, out_format,
-                                             xav_reader->reader->frame->pts);
+    frame_term =
+        xav_nif_audio_frame_to_term(env, out_data, out_samples, out_size,
+                                    xav_reader->ac->out_sample_fmt, xav_reader->reader->frame->pts);
     av_freep(&out_data[0]);
   }
 

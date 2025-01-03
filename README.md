@@ -29,7 +29,7 @@ end
 Decode
 
 ```elixir
-decoder = Xav.Decoder.new(:vp8)
+decoder = Xav.Decoder.new(:vp8, out_format: :rgb24)
 {:ok, %Xav.Frame{} = frame} = Xav.Decoder.decode(decoder, <<"somebinary">>)
 ```
 
@@ -52,7 +52,7 @@ Kino.Image.new(tensor)
 Read from a camera:
 
 ```elixir
-r = Xav.Reader.new!("/dev/video0", device?: true)
+r = Xav.Reader.new!("/dev/video0", device?: true, out_format: :rgb24)
 {:ok, %Xav.Frame{} = frame} = Xav.Reader.next_frame(r)
 tensor = Xav.Frame.to_nx(frame)
 Kino.Image.new(tensor)
