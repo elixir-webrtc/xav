@@ -8,6 +8,7 @@
 
 struct Decoder {
   enum AVMediaType media_type;
+  enum AVPixelFormat out_format;
   AVFrame *frame;
   AVPacket *pkt;
   const AVCodec *codec;
@@ -16,7 +17,7 @@ struct Decoder {
 
 struct Decoder *decoder_alloc();
 
-int decoder_init(struct Decoder *decoder, const char *codec);
+int decoder_init(struct Decoder *decoder, const char *codec, const char* format);
 
 int decoder_decode(struct Decoder *decoder, AVPacket *pkt, AVFrame *frame);
 

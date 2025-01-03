@@ -286,7 +286,11 @@ defmodule Xav.DecoderTest do
                 142, 204, 5, 106, 217, 175, 162, 62, 128, 161, 69, 136, 234, 30, 43, 165, 152,
                 104, 143>>
 
+  # Use ffmpeg to extract the first frame of the video
+  # ffmpeg -i sample_video.mp4 -c:copy -f h264 -vframes 1 sample_h264.h264
   @h264_frame File.read!("test/fixtures/decoder/sample_h264.h264")
+  # You can do the same for hevc given that the mp4 file contains a hevc stream
+  # ffmpeg -i sample_video.mp4 -c:copy -f hevc -vframes 1 sample_h265.h265
   @h265_frame File.read!("test/fixtures/decoder/sample_h265.h265")
 
   test "new/0" do
@@ -323,8 +327,10 @@ defmodule Xav.DecoderTest do
     test "video keyframe" do
       decoder = Xav.Decoder.new(:vp8)
 
-      assert {:ok, %Xav.Frame{width: 640, height: 480, pts: 0, format: :rgb}} =
+      assert {:ok, %Xav.Frame{width: 640, height: 480, pts: 0, data: frame, format: :yuv420p}} =
                Xav.Decoder.decode(decoder, @vp8_keyframe)
+
+      assert byte_size(frame) == 640 * 480 * 3 / 2
     end
 
     test "video without prior keyframe" do
@@ -338,7 +344,7 @@ defmodule Xav.DecoderTest do
 
       assert :ok = Xav.Decoder.decode(decoder, @h264_frame)
 
-      assert {:ok, [%Xav.Frame{width: 1280, height: 720, pts: 0, format: :rgb}]} =
+      assert {:ok, [%Xav.Frame{width: 1280, height: 720, pts: 0, format: :yuv420p}]} =
                Xav.Decoder.flush(decoder)
     end
 
@@ -347,8 +353,18 @@ defmodule Xav.DecoderTest do
 
       assert :ok = Xav.Decoder.decode(decoder, @h265_frame)
 
-      assert {:ok, [%Xav.Frame{width: 1920, height: 1080, pts: 0, format: :rgb}]} =
+      assert {:ok, [%Xav.Frame{width: 1920, height: 1080, pts: 0, format: :yuv420p}]} =
                Xav.Decoder.flush(decoder)
     end
+
+    test "convert video frame" do
+      decoder = Xav.Decoder.new(:vp8, out_format: :rgb24)
+
+      assert {:ok, %Xav.Frame{width: 640, height: 480, pts: 0, data: frame, format: :rgb24}} =
+               Xav.Decoder.decode(decoder, @vp8_keyframe)
+
+      assert byte_size(frame) == 640 * 480 * 3
+    end
+  end
   end
 end

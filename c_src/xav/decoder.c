@@ -13,7 +13,7 @@ struct Decoder *decoder_alloc() {
   return decoder;
 }
 
-int decoder_init(struct Decoder *decoder, const char *codec) {
+int decoder_init(struct Decoder *decoder, const char *codec, const char* format) {
   if (strcmp(codec, "opus") == 0) {
     decoder->media_type = AVMEDIA_TYPE_AUDIO;
     decoder->codec = avcodec_find_decoder(AV_CODEC_ID_OPUS);
@@ -25,7 +25,7 @@ int decoder_init(struct Decoder *decoder, const char *codec) {
     decoder->codec = avcodec_find_decoder(AV_CODEC_ID_H264);
   } else if (strcmp(codec, "h265") == 0) {
     decoder->media_type = AVMEDIA_TYPE_VIDEO;
-    decoder->codec = avcodec_find_decoder(AV_CODEC_ID_H265);
+    decoder->codec = avcodec_find_decoder(AV_CODEC_ID_HEVC);
   } else {
     return -1;
   }
@@ -52,6 +52,8 @@ int decoder_init(struct Decoder *decoder, const char *codec) {
   if (avcodec_open2(decoder->c, decoder->codec, NULL) < 0) {
     return -1;
   }
+
+  decoder->out_format = av_get_pix_fmt(format);
 
   return 0;
 }

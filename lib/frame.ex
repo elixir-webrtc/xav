@@ -11,9 +11,15 @@ defmodule Xav.Frame do
   @typedoc """
   Possible video frame formats.
 
-  Currently, only RGB is supported.
+  The list of accepted formats are all `ffmpeg` pixel formats. For a complete list run:
+
+  ```sh
+  ffmpeg -pix_fmts
+  ```
+
+  An example of a pixel format is `:rgb24`.
   """
-  @type video_format() :: :rgb
+  @type video_format() :: atom()
 
   @type format() :: audio_format() | video_format()
 
