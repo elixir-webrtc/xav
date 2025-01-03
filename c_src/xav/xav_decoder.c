@@ -62,7 +62,7 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "failed_to_allocate_decoder");
   }
 
-  if (decoder_init(xav_decoder->decoder, codec) != 0) {
+  if (decoder_init(xav_decoder->decoder, codec, xav_decoder->out_format) != 0) {
     return xav_nif_raise(env, "failed_to_init_decoder");
   }
 
@@ -79,17 +79,21 @@ ERL_NIF_TERM convert(ErlNifEnv *env, struct XavDecoder *xav_decoder, AVFrame* fr
   if (xav_decoder->decoder->media_type == AVMEDIA_TYPE_VIDEO) {
     XAV_LOG_DEBUG("Converting video to RGB");
 
-    uint8_t *out_data[4];
-    int out_linesize[4];
+    int out_pix_fmt = xav_decoder->decoder->out_format;
 
-    ret = video_converter_convert(frame, out_data, out_linesize);
+    if (out_pix_fmt == AV_PIX_FMT_NONE) {
+      return xav_nif_video_frame_to_term(env, frame);
+    }
+
+    AVFrame *dst_frame;
+    ret = video_converter_convert(frame, &dst_frame, out_pix_fmt);
     if (ret <= 0) {
       return xav_nif_raise(env, "failed_to_decode");
     }
 
-    frame_term = xav_nif_video_frame_to_term(env, frame, out_data, out_linesize, "rgb");
+    frame_term = xav_nif_video_frame_to_term(env, dst_frame);
 
-    av_freep(&out_data[0]);
+    av_frame_free(&dst_frame);
   } else if (xav_decoder->decoder->media_type == AVMEDIA_TYPE_AUDIO) {
     XAV_LOG_DEBUG("Converting audio to desired out format");
 

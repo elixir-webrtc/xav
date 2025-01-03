@@ -147,18 +147,15 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   if (xav_reader->reader->media_type == AVMEDIA_TYPE_VIDEO) {
     XAV_LOG_DEBUG("Converting video to RGB");
 
-    uint8_t *out_data[4];
-    int out_linesize[4];
-
-    ret = video_converter_convert(xav_reader->reader->frame, out_data, out_linesize);
+    AVFrame *dst_frame;
+    ret = video_converter_convert(xav_reader->reader->frame, &dst_frame, AV_PIX_FMT_RGB24);
     if (ret <= 0) {
       return xav_nif_raise(env, "failed_to_read");
     }
 
-    frame_term =
-        xav_nif_video_frame_to_term(env, xav_reader->reader->frame, out_data, out_linesize, "rgb");
+    frame_term = xav_nif_video_frame_to_term(env, dst_frame);
 
-    av_freep(&out_data[0]);
+    av_frame_free(&dst_frame);
   } else if (xav_reader->reader->media_type == AVMEDIA_TYPE_AUDIO) {
     XAV_LOG_DEBUG("Converting audio to desired out format");
 
