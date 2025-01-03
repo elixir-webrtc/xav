@@ -30,8 +30,11 @@ defmodule Xav.Decoder do
   [out_format: :f32]
   ```
 
-  Video frames are always returned in RGB format.
-  This setting cannot be changed.
+  or video samples format:
+
+  ```elixir
+  [out_format: :rgb24]
+  ```
 
   Audio samples are always in the packed form -
   samples from different channels are interleaved in the same, single binary:
