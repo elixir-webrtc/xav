@@ -35,6 +35,13 @@ int decoder_init(struct Decoder *decoder, const char *codec, const char* out_for
     return -1;
   }
 
+  if(decoder->media_type == AVMEDIA_TYPE_VIDEO && strcmp(out_format, "nil") != 0) {
+    decoder->out_format = av_get_pix_fmt(out_format);
+    if (decoder->out_format == AV_PIX_FMT_NONE) {
+      return -1;
+    }
+  }
+
   decoder->c = avcodec_alloc_context3(decoder->codec);
   if (!decoder->c) {
     return -1;
@@ -52,13 +59,6 @@ int decoder_init(struct Decoder *decoder, const char *codec, const char* out_for
 
   if (avcodec_open2(decoder->c, decoder->codec, NULL) < 0) {
     return -1;
-  }
-
-  if(decoder->media_type == AVMEDIA_TYPE_VIDEO && strcmp(out_format, "nil") != 0) {
-    decoder->out_format = av_get_pix_fmt(out_format);
-    if (decoder->out_format == AV_PIX_FMT_NONE) {
-      return -1;
-    }
   }
 
   return 0;
