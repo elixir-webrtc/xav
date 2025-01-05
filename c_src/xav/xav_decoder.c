@@ -1,10 +1,10 @@
 #include "xav_decoder.h"
 #include "audio_converter.h"
-#include "video_converter.h"
 
 ErlNifResourceType *xav_decoder_resource_type;
 
 static int init_audio_converter(struct XavDecoder *xav_decoder);
+static int init_video_converter(struct XavDecoder *xav_decoder, AVFrame *frame);
 
 void free_frames(AVFrame **frames, int size) {
   for (int i = 0; i < size; i++) {
@@ -86,6 +86,7 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
       enif_alloc_resource(xav_decoder_resource_type, sizeof(struct XavDecoder));
   xav_decoder->decoder = NULL;
   xav_decoder->ac = NULL;
+  xav_decoder->vc = NULL;
   xav_decoder->out_audio_fmt = out_audo_fmt;
   xav_decoder->out_video_fmt = out_video_fmt;
   xav_decoder->out_sample_rate = out_sample_rate;
@@ -119,15 +120,20 @@ ERL_NIF_TERM convert(ErlNifEnv *env, struct XavDecoder *xav_decoder, AVFrame *fr
       return xav_nif_video_frame_to_term(env, frame);
     }
 
-    AVFrame *dst_frame;
-    ret = video_converter_convert(frame, &dst_frame, xav_decoder->out_video_fmt);
-    if (ret <= 0) {
-      return xav_nif_raise(env, "failed_to_decode");
+    if (xav_decoder->vc == NULL) {
+      ret = init_video_converter(xav_decoder, frame);
+      if (ret < 0) {
+        return xav_nif_raise(env, "failed_to_init_converter");
+      }
     }
 
-    frame_term = xav_nif_video_frame_to_term(env, dst_frame);
+    ret = video_converter_convert(xav_decoder->vc, frame);
+    if (ret < 0) {
+      return xav_nif_raise(env, "failed_to_convert");
+    }
 
-    av_frame_free(&dst_frame);
+    frame_term = xav_nif_video_frame_to_term(env, xav_decoder->vc->dst_frame);
+
   } else if (xav_decoder->decoder->media_type == AVMEDIA_TYPE_AUDIO) {
     XAV_LOG_DEBUG("Converting audio to desired out format");
 
@@ -286,6 +292,16 @@ static int init_audio_converter(struct XavDecoder *xav_decoder) {
                               xav_decoder->out_audio_fmt);
 }
 
+static int init_video_converter(struct XavDecoder *xav_decoder, AVFrame *frame) {
+  xav_decoder->vc = video_converter_alloc();
+  if (xav_decoder->vc == NULL) {
+    XAV_LOG_DEBUG("Couldn't allocate video converter");
+  }
+
+  return video_converter_init(xav_decoder->vc, frame->width, frame->height, 
+                                  frame->format, xav_decoder->out_video_fmt);
+}
+
 void free_xav_decoder(ErlNifEnv *env, void *obj) {
   XAV_LOG_DEBUG("Freeing XavDecoder object");
   struct XavDecoder *xav_decoder = (struct XavDecoder *)obj;
@@ -295,6 +311,10 @@ void free_xav_decoder(ErlNifEnv *env, void *obj) {
 
   if (xav_decoder->ac != NULL) {
     audio_converter_free(&xav_decoder->ac);
+  }
+
+  if (xav_decoder->vc != NULL) {
+    video_converter_free(&xav_decoder->vc);
   }
 }
 
