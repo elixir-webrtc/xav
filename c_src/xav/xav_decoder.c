@@ -296,6 +296,7 @@ static int init_video_converter(struct XavDecoder *xav_decoder, AVFrame *frame) 
   xav_decoder->vc = video_converter_alloc();
   if (xav_decoder->vc == NULL) {
     XAV_LOG_DEBUG("Couldn't allocate video converter");
+    return -1;
   }
 
   return video_converter_init(xav_decoder->vc, frame->width, frame->height, 
