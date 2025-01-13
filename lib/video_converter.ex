@@ -8,14 +8,14 @@ defmodule Xav.VideoConverter do
   alias Xav.Frame
   alias Xav.VideoConverter.NIF
 
-  @type t :: %__MODULE__{format: Frame.video_format()}
+  @type t :: %__MODULE__{format: Frame.video_format(), converter: reference()}
 
   @typedoc """
   Type definition for converter options.
 
   * `format` - video format to convert to (`e.g. :rgb24`).
   """
-  @type converter_opts() :: [converter: reference(), format: Frame.video_format()]
+  @type converter_opts() :: [format: Frame.video_format()]
 
   @enforce_keys [:format]
   defstruct [:format, :converter]
