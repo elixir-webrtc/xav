@@ -3,5 +3,6 @@
 
 struct XavVideoConverter {
     struct VideoConverter *vc;
+    enum AVPixelFormat out_format;
     AVFrame* frame;
 };

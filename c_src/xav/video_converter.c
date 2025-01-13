@@ -66,10 +66,17 @@ int video_converter_convert(struct VideoConverter *converter, AVFrame *src_frame
 }
 
 void video_converter_free(struct VideoConverter **converter) {
-  if (*converter != NULL) {
-    sws_freeContext((*converter)->sws_ctx);
-    av_frame_free(&(*converter)->dst_frame);
-    XAV_FREE(*converter);
+  struct VideoConverter* vc = *converter;
+  if (vc != NULL) {
+    if (vc->sws_ctx != NULL) {
+      sws_freeContext((*converter)->sws_ctx);
+    }
+
+    if (vc->dst_frame != NULL) {
+      av_frame_free(&(*converter)->dst_frame);
+    }
+
+    XAV_FREE(vc);
     *converter = NULL;
   }
 }

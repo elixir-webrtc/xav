@@ -1,23 +1,21 @@
 defmodule Xav.VideoConverterTest do
   use ExUnit.Case, async: true
 
-  test "new/4" do
-    assert {:ok, converter} = Xav.VideoConverter.new(1920, 1080, :yuv420p, :rgb24)
-    assert {:error, :unknown_format} = Xav.VideoConverter.new(1920, 1080, :yuv420p, :rgb)
+  test "new/1" do
+    assert {:ok, %Xav.VideoConverter{format: :rgb24, converter: converter}} =
+             Xav.VideoConverter.new(format: :rgb24)
 
     assert is_reference(converter)
   end
 
-  test "new!/4" do
-    assert converter = Xav.VideoConverter.new!(1920, 1080, :yuv420p, :rgb24)
-    assert_raise RuntimeError, fn -> Xav.VideoConverter.new!(1920, 1080, :yuv420p, :rgb) end
-
-    assert is_reference(converter)
+  test "new!/1" do
+    assert %Xav.VideoConverter{} = Xav.VideoConverter.new!(format: :rgb24)
+    assert_raise ErlangError, fn -> Xav.VideoConverter.new!(format: :rgb) end
   end
 
   describe "convert/2" do
     setup do
-      %{converter: Xav.VideoConverter.new!(480, 360, :yuv420p, :rgb24)}
+      %{converter: Xav.VideoConverter.new!(format: :rgb24)}
     end
 
     test "convert video format", %{converter: converter} do

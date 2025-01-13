@@ -20,6 +20,22 @@ ERL_NIF_TERM xav_nif_raise(ErlNifEnv *env, char *msg) {
   return enif_raise_exception(env, reason);
 }
 
+int xav_get_atom(ErlNifEnv *env, ERL_NIF_TERM atom, char **value) {
+  unsigned int atom_len;
+  if (!enif_get_atom_length(env, atom, &atom_len, ERL_NIF_LATIN1)) {
+    return 0;
+  }
+
+  char *format = (char *)XAV_ALLOC((atom_len * 1) * sizeof(char *));
+  if (!enif_get_atom(env, atom, format, atom_len + 1, ERL_NIF_LATIN1)) {
+    XAV_FREE(format);
+    return 0;
+  }
+
+  *value = format;
+  return 1;
+}
+
 ERL_NIF_TERM xav_nif_audio_frame_to_term(ErlNifEnv *env, uint8_t **out_data, int out_samples,
                                          int out_size, enum AVSampleFormat out_format, int pts) {
   ERL_NIF_TERM data_term;
