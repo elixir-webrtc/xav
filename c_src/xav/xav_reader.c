@@ -1,7 +1,8 @@
 #include "xav_reader.h"
-#include "video_converter.h"
 
 static int init_audio_converter(struct XavReader *xav_reader);
+static int init_video_converter(struct XavReader *xav_reader, AVFrame *frame);
+
 ErlNifResourceType *xav_reader_resource_type;
 
 ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
@@ -56,6 +57,7 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
       enif_alloc_resource(xav_reader_resource_type, sizeof(struct XavReader));
   xav_reader->reader = NULL;
   xav_reader->ac = NULL;
+  xav_reader->vc = NULL;
   xav_reader->out_format = out_format;
   xav_reader->out_sample_rate = out_sample_rate;
   xav_reader->out_channels = out_channels;
@@ -111,7 +113,7 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   } else if (xav_reader->reader->media_type == AVMEDIA_TYPE_VIDEO) {
     ERL_NIF_TERM in_format_term =
         enif_make_atom(env, av_get_pix_fmt_name(xav_reader->reader->c->pix_fmt));
-    ERL_NIF_TERM out_format_term = enif_make_atom(env, "rgb");
+    ERL_NIF_TERM out_format_term = enif_make_atom(env, "rgb24");
     ERL_NIF_TERM framerate_num_term = enif_make_int(env, xav_reader->reader->framerate.num);
     ERL_NIF_TERM framerate_den_term = enif_make_int(env, xav_reader->reader->framerate.den);
     ERL_NIF_TERM framerate_term = enif_make_tuple(env, 2, framerate_num_term, framerate_den_term);
@@ -147,15 +149,19 @@ ERL_NIF_TERM next_frame(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   if (xav_reader->reader->media_type == AVMEDIA_TYPE_VIDEO) {
     XAV_LOG_DEBUG("Converting video to RGB");
 
-    AVFrame *dst_frame;
-    ret = video_converter_convert(xav_reader->reader->frame, &dst_frame, AV_PIX_FMT_RGB24);
+    if (xav_reader->vc == NULL) {
+      ret = init_video_converter(xav_reader, xav_reader->reader->frame);
+      if (ret < 0) {
+        return xav_nif_raise(env, "failed_to_init_converter");
+      }
+    }
+
+    ret = video_converter_convert(xav_reader->vc, xav_reader->reader->frame);
     if (ret <= 0) {
       return xav_nif_raise(env, "failed_to_read");
     }
 
-    frame_term = xav_nif_video_frame_to_term(env, dst_frame);
-
-    av_frame_free(&dst_frame);
+    frame_term = xav_nif_video_frame_to_term(env, xav_reader->vc->dst_frame);
   } else if (xav_reader->reader->media_type == AVMEDIA_TYPE_AUDIO) {
     XAV_LOG_DEBUG("Converting audio to desired out format");
 
@@ -277,6 +283,17 @@ static int init_audio_converter(struct XavReader *xav_reader) {
                               out_sample_fmt);
 }
 
+static int init_video_converter(struct XavReader *xav_reader, AVFrame *frame) {
+  xav_reader->vc = video_converter_alloc();
+  if (xav_reader->vc == NULL) {
+    XAV_LOG_DEBUG("Couldn't allocate video converter");
+    return -1;
+  }
+
+  return video_converter_init(xav_reader->vc, frame->width, frame->height, 
+                                  frame->format, AV_PIX_FMT_RGB24);
+}
+
 void free_xav_reader(ErlNifEnv *env, void *obj) {
   XAV_LOG_DEBUG("Freeing XavReader object");
   struct XavReader *xav_reader = (struct XavReader *)obj;
@@ -286,6 +303,10 @@ void free_xav_reader(ErlNifEnv *env, void *obj) {
 
   if (xav_reader->ac != NULL) {
     audio_converter_free(&xav_reader->ac);
+  }
+
+  if (xav_reader->vc != NULL) {
+    video_converter_free(&xav_reader->vc);
   }
 }
 
