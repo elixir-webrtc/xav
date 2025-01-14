@@ -12,7 +12,7 @@ void free_frames(AVFrame **frames, int size) {
   }
 }
 
-ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   if (argc != 6) {
     return xav_nif_raise(env, "invalid_arg_count");
   }
@@ -119,8 +119,10 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   enif_release_resource(xav_decoder);
 
 clean:
-  if (codec != NULL) XAV_FREE(codec);
-  if (out_format != NULL) XAV_FREE(out_format);
+  if (codec != NULL)
+    XAV_FREE(codec);
+  if (out_format != NULL)
+    XAV_FREE(out_format);
 
   return ret;
 }
@@ -133,9 +135,8 @@ ERL_NIF_TERM convert(ErlNifEnv *env, struct XavDecoder *xav_decoder, AVFrame *fr
     XAV_LOG_DEBUG("Converting video to RGB");
 
     // no pixel format conversion and no scaling
-    if (xav_decoder->out_video_fmt == AV_PIX_FMT_NONE && 
-          xav_decoder->out_width == -1 && 
-          xav_decoder->out_height == -1) {
+    if (xav_decoder->out_video_fmt == AV_PIX_FMT_NONE && xav_decoder->out_width == -1 &&
+        xav_decoder->out_height == -1) {
       return xav_nif_video_frame_to_term(env, frame);
     }
 
@@ -322,9 +323,8 @@ static int init_video_converter(struct XavDecoder *xav_decoder, AVFrame *frame) 
   if (out_format == AV_PIX_FMT_NONE)
     out_format = frame->format;
 
-  return video_converter_init(xav_decoder->vc, frame->width, frame->height, 
-                              frame->format, xav_decoder->out_width, xav_decoder->out_height, 
-                              out_format);
+  return video_converter_init(xav_decoder->vc, frame->width, frame->height, frame->format,
+                              xav_decoder->out_width, xav_decoder->out_height, out_format);
 }
 
 void free_xav_decoder(ErlNifEnv *env, void *obj) {
