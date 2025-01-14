@@ -68,7 +68,7 @@ defmodule Xav.VideoConverter do
   end
 
   @doc """
-  Converts a video frame.ed changes
+  Converts a video frame.
   """
   @spec convert(t(), Frame.t()) :: Frame.t()
   def convert(
