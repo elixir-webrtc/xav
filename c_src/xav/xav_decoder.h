@@ -6,9 +6,13 @@
 
 struct XavDecoder {
   struct Decoder *decoder;
-  struct AudioConverter *ac;
+  // Video params
   struct VideoConverter *vc;
   enum AVPixelFormat out_video_fmt;
+  int out_width;
+  int out_height;
+  // Audio params
+  struct AudioConverter *ac;
   enum AVSampleFormat out_audio_fmt;
   int out_sample_rate;
   int out_channels;

@@ -23,12 +23,15 @@ defmodule Xav.Frame do
 
   @type format() :: audio_format() | video_format()
 
+  @type width :: non_neg_integer() | nil
+  @type height :: non_neg_integer() | nil
+
   @type t() :: %__MODULE__{
           type: :audio | :video,
           data: binary(),
           format: format(),
-          width: non_neg_integer() | nil,
-          height: non_neg_integer() | nil,
+          width: width(),
+          height: height(),
           samples: integer() | nil,
           pts: integer()
         }

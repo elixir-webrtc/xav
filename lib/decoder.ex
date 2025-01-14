@@ -16,7 +16,9 @@ defmodule Xav.Decoder do
   @type opts :: [
           out_format: Xav.Frame.format(),
           out_sample_rate: integer(),
-          out_channels: integer()
+          out_channels: integer(),
+          out_width: Xav.Frame.width(),
+          out_height: Xav.Frame.height()
         ]
 
   @doc """
@@ -34,6 +36,11 @@ defmodule Xav.Decoder do
 
   ```elixir
   [out_format: :rgb24]
+  ```
+
+  or scale video samples:
+  ```elixir
+  [out_width: 640, out_height: 480]
   ```
 
   Audio samples are always in the packed form -
@@ -59,7 +66,9 @@ defmodule Xav.Decoder do
     out_format = opts[:out_format]
     out_sample_rate = opts[:out_sample_rate] || 0
     out_channels = opts[:out_channels] || 0
-    Xav.Decoder.NIF.new(codec, out_format, out_sample_rate, out_channels)
+    out_width = opts[:out_width] || -1
+    out_height = opts[:out_height] || -1
+    Xav.Decoder.NIF.new(codec, out_format, out_sample_rate, out_channels, out_width, out_height)
   end
 
   @doc """

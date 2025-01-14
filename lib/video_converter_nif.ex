@@ -8,7 +8,7 @@ defmodule Xav.VideoConverter.NIF do
     :ok = :erlang.load_nif(path, 0)
   end
 
-  def new(_format), do: :erlang.nif_error(:undef)
+  def new(_format, _width, _height), do: :erlang.nif_error(:undef)
 
   def convert(_converter, _frame, _width, _height, _pix_format), do: :erlang.nif_error(:undef)
 end

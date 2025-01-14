@@ -291,7 +291,8 @@ static int init_video_converter(struct XavReader *xav_reader, AVFrame *frame) {
   }
 
   return video_converter_init(xav_reader->vc, frame->width, frame->height, 
-                                  frame->format, AV_PIX_FMT_RGB24);
+                                  frame->format, frame->width, frame->height, 
+                                  AV_PIX_FMT_RGB24);
 }
 
 void free_xav_reader(ErlNifEnv *env, void *obj) {

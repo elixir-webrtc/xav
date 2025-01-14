@@ -13,18 +13,16 @@ void free_frames(AVFrame **frames, int size) {
 }
 
 ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  if (argc != 4) {
+  if (argc != 6) {
     return xav_nif_raise(env, "invalid_arg_count");
   }
 
-  // resolve codec
-  unsigned int codec_len;
-  if (!enif_get_atom_length(env, argv[0], &codec_len, ERL_NIF_LATIN1)) {
-    return xav_nif_raise(env, "failed_to_get_atom_length");
-  }
+  ERL_NIF_TERM ret;
+  char *codec = NULL;
+  char *out_format = NULL;
 
-  char *codec = (char *)XAV_ALLOC((codec_len + 1) * sizeof(char *));
-  if (enif_get_atom(env, argv[0], codec, codec_len + 1, ERL_NIF_LATIN1) == 0) {
+  // resolve codec
+  if (!xav_get_atom(env, argv[0], &codec)) {
     return xav_nif_raise(env, "failed_to_get_atom");
   }
 
@@ -39,22 +37,18 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   } else if (strcmp(codec, "h264") == 0) {
     media_type = AVMEDIA_TYPE_VIDEO;
     codec_id = AV_CODEC_ID_H264;
-  } else if (strcmp(codec, "h265") == 0) {
+  } else if (strcmp(codec, "h265") == 0 || strcmp(codec, "hevc") == 0) {
     media_type = AVMEDIA_TYPE_VIDEO;
     codec_id = AV_CODEC_ID_HEVC;
   } else {
-    return xav_nif_raise(env, "failed_to_resolve_codec");
+    ret = xav_nif_raise(env, "failed_to_resolve_codec");
+    goto clean;
   }
 
   // resolve output format
-  unsigned int out_format_len;
-  if (!enif_get_atom_length(env, argv[1], &out_format_len, ERL_NIF_LATIN1)) {
-    return xav_nif_raise(env, "failed_to_get_atom_length");
-  }
-
-  char *out_format = (char *)XAV_ALLOC((out_format_len + 1) * sizeof(char *));
-  if (enif_get_atom(env, argv[1], out_format, out_format_len + 1, ERL_NIF_LATIN1) == 0) {
-    return xav_nif_raise(env, "failed_to_get_atom");
+  if (!xav_get_atom(env, argv[1], &out_format)) {
+    ret = xav_nif_raise(env, "failed_to_get_atom");
+    goto clean;
   }
 
   enum AVPixelFormat out_video_fmt = AV_PIX_FMT_NONE;
@@ -62,24 +56,40 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   if (media_type == AVMEDIA_TYPE_VIDEO && strcmp(out_format, "nil") != 0) {
     out_video_fmt = av_get_pix_fmt(out_format);
     if (out_video_fmt == AV_PIX_FMT_NONE) {
-      return xav_nif_raise(env, "unknown_out_format");
+      ret = xav_nif_raise(env, "unknown_out_format");
+      goto clean;
     }
   } else if (media_type == AVMEDIA_TYPE_AUDIO && strcmp(out_format, "nil") != 0) {
     out_audo_fmt = av_get_sample_fmt(out_format);
     if (out_audo_fmt == AV_SAMPLE_FMT_NONE) {
-      return xav_nif_raise(env, "unknown_out_format");
+      ret = xav_nif_raise(env, "unknown_out_format");
+      goto clean;
     }
   }
 
   // resolve other params
   int out_sample_rate;
   if (!enif_get_int(env, argv[2], &out_sample_rate)) {
-    return xav_nif_raise(env, "invalid_out_sample_rate");
+    ret = xav_nif_raise(env, "invalid_out_sample_rate");
+    goto clean;
   }
 
   int out_channels;
   if (!enif_get_int(env, argv[3], &out_channels)) {
-    return xav_nif_raise(env, "invalid_out_channels");
+    ret = xav_nif_raise(env, "invalid_out_channels");
+    goto clean;
+  }
+
+  int out_width;
+  if (!enif_get_int(env, argv[4], &out_width)) {
+    ret = xav_nif_raise(env, "failed_to_get_int");
+    goto clean;
+  }
+
+  int out_height;
+  if (!enif_get_int(env, argv[5], &out_height)) {
+    ret = xav_nif_raise(env, "failed_to_get_int");
+    goto clean;
   }
 
   struct XavDecoder *xav_decoder =
@@ -87,26 +97,32 @@ ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   xav_decoder->decoder = NULL;
   xav_decoder->ac = NULL;
   xav_decoder->vc = NULL;
-  xav_decoder->out_audio_fmt = out_audo_fmt;
   xav_decoder->out_video_fmt = out_video_fmt;
+  xav_decoder->out_width = out_width;
+  xav_decoder->out_height = out_height;
+  xav_decoder->out_audio_fmt = out_audo_fmt;
   xav_decoder->out_sample_rate = out_sample_rate;
   xav_decoder->out_channels = out_channels;
 
   xav_decoder->decoder = decoder_alloc();
   if (xav_decoder->decoder == NULL) {
-    return xav_nif_raise(env, "failed_to_allocate_decoder");
+    ret = xav_nif_raise(env, "failed_to_allocate_decoder");
+    goto clean;
   }
 
   if (decoder_init(xav_decoder->decoder, media_type, codec_id) != 0) {
-    return xav_nif_raise(env, "failed_to_init_decoder");
+    ret = xav_nif_raise(env, "failed_to_init_decoder");
+    goto clean;
   }
 
-  ERL_NIF_TERM decoder_term = enif_make_resource(env, xav_decoder);
+  ret = enif_make_resource(env, xav_decoder);
   enif_release_resource(xav_decoder);
 
-  XAV_FREE(out_format);
+clean:
+  if (codec != NULL) XAV_FREE(codec);
+  if (out_format != NULL) XAV_FREE(out_format);
 
-  return decoder_term;
+  return ret;
 }
 
 ERL_NIF_TERM convert(ErlNifEnv *env, struct XavDecoder *xav_decoder, AVFrame *frame) {
@@ -116,7 +132,10 @@ ERL_NIF_TERM convert(ErlNifEnv *env, struct XavDecoder *xav_decoder, AVFrame *fr
   if (xav_decoder->decoder->media_type == AVMEDIA_TYPE_VIDEO) {
     XAV_LOG_DEBUG("Converting video to RGB");
 
-    if (xav_decoder->out_video_fmt == AV_PIX_FMT_NONE) {
+    // no pixel format conversion and no scaling
+    if (xav_decoder->out_video_fmt == AV_PIX_FMT_NONE && 
+          xav_decoder->out_width == -1 && 
+          xav_decoder->out_height == -1) {
       return xav_nif_video_frame_to_term(env, frame);
     }
 
@@ -299,8 +318,13 @@ static int init_video_converter(struct XavDecoder *xav_decoder, AVFrame *frame) 
     return -1;
   }
 
+  enum AVPixelFormat out_format = xav_decoder->out_video_fmt;
+  if (out_format == AV_PIX_FMT_NONE)
+    out_format = frame->format;
+
   return video_converter_init(xav_decoder->vc, frame->width, frame->height, 
-                                  frame->format, xav_decoder->out_video_fmt);
+                              frame->format, xav_decoder->out_width, xav_decoder->out_height, 
+                              out_format);
 }
 
 void free_xav_decoder(ErlNifEnv *env, void *obj) {
@@ -319,7 +343,7 @@ void free_xav_decoder(ErlNifEnv *env, void *obj) {
   }
 }
 
-static ErlNifFunc xav_funcs[] = {{"new", 4, new},
+static ErlNifFunc xav_funcs[] = {{"new", 6, new},
                                  {"decode", 4, decode, ERL_NIF_DIRTY_JOB_CPU_BOUND},
                                  {"flush", 1, flush, ERL_NIF_DIRTY_JOB_CPU_BOUND}};
 
