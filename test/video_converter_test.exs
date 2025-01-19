@@ -2,17 +2,13 @@ defmodule Xav.VideoConverterTest do
   use ExUnit.Case, async: true
 
   test "new/1" do
-    assert {:ok, %Xav.VideoConverter{format: :rgb24, converter: converter}} =
-             Xav.VideoConverter.new(format: :rgb24)
+    assert %Xav.VideoConverter{out_format: :rgb24, converter: converter} =
+             Xav.VideoConverter.new(out_format: :rgb24)
 
     assert is_reference(converter)
 
-    assert_raise RuntimeError, fn -> Xav.VideoConverter.new(format: nil) end
-  end
-
-  test "new!/1" do
-    assert %Xav.VideoConverter{} = Xav.VideoConverter.new!(format: :rgb24)
-    assert_raise ErlangError, fn -> Xav.VideoConverter.new!(format: :rgb) end
+    assert_raise RuntimeError, fn -> Xav.VideoConverter.new(out_format: nil) end
+    assert_raise ErlangError, fn -> Xav.VideoConverter.new(out_format: :rgb) end
   end
 
   describe "convert/2" do
@@ -27,7 +23,7 @@ defmodule Xav.VideoConverterTest do
       }
 
       %{
-        converter: Xav.VideoConverter.new!(format: :rgb24),
+        converter: Xav.VideoConverter.new(out_format: :rgb24),
         frame_480p: frame_480p
       }
     end
@@ -67,18 +63,21 @@ defmodule Xav.VideoConverterTest do
     end
 
     test "scale video frame", %{frame_480p: frame_480p} do
-      converter = Xav.VideoConverter.new!(width: 368)
+      converter = Xav.VideoConverter.new(out_width: 368)
 
       assert %Xav.Frame{
                type: :video,
                format: :yuv420p,
+               data: data,
                width: 368,
                height: 276
              } = Xav.VideoConverter.convert(converter, frame_480p)
+
+      assert byte_size(data) == 368 * 276 * 3 / 2
     end
 
     test "scale and convert video frame", %{frame_480p: frame_480p} do
-      converter = Xav.VideoConverter.new!(width: 360, height: 240, format: :rgb24)
+      converter = Xav.VideoConverter.new(out_width: 360, out_height: 240, out_format: :rgb24)
 
       assert %Xav.Frame{
                type: :video,

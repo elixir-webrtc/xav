@@ -59,10 +59,8 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   xav_video_converter->out_width = width;
   xav_video_converter->out_height = height;
 
-  ERL_NIF_TERM converter_term = enif_make_resource(env, xav_video_converter);
+  ret = enif_make_resource(env, xav_video_converter);
   enif_release_resource(xav_video_converter);
-
-  ret = xav_nif_ok(env, converter_term);
 
 clean:
   XAV_FREE(format);

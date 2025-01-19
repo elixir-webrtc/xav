@@ -38,11 +38,6 @@ defmodule Xav.Decoder do
   [out_format: :rgb24]
   ```
 
-  or scale video samples:
-  ```elixir
-  [out_width: 640, out_height: 480]
-  ```
-
   Audio samples are always in the packed form -
   samples from different channels are interleaved in the same, single binary:
 

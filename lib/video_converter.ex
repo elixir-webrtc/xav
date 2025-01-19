@@ -10,61 +10,49 @@ defmodule Xav.VideoConverter do
 
   @type t :: %__MODULE__{
           converter: reference(),
-          format: Frame.video_format(),
-          width: Frame.width(),
-          height: Frame.height()
+          out_format: Frame.video_format(),
+          out_width: Frame.width(),
+          out_height: Frame.height()
         }
 
   @typedoc """
   Type definition for converter options.
 
-  * `format` - video format to convert to (`e.g. :rgb24`).
-  * `width` - scale the video frame to this width.
-  * `height` - scale the video frame to this height.
+  * `out_format` - video format to convert to (`e.g. :rgb24`).
+  * `out_width` - scale the video frame to this width.
+  * `out_height` - scale the video frame to this height.
 
-  If `width` and `height` are both not provided, scaling is not performed. If one of the
+  If `out_width` and `out_height` are both not provided, scaling is not performed. If one of the
   dimensions is `nil`, the other will be calculated based on the input dimensions as
   to keep the aspect ratio.
   """
   @type converter_opts() :: [
-          format: Frame.video_format(),
-          width: Frame.width(),
-          height: Frame.height()
+          out_format: Frame.video_format(),
+          out_width: Frame.width(),
+          out_height: Frame.height()
         ]
 
-  defstruct [:converter, :format, :width, :height]
+  defstruct [:converter, :out_format, :out_width, :out_height]
 
   @doc """
   Creates a new video converter.
   """
-  @spec new(converter_opts()) :: {:ok, t()} | {:error, any()}
+  @spec new(converter_opts()) :: t()
   def new(converter_opts) do
-    opts = Keyword.validate!(converter_opts, [:format, :width, :height])
+    opts = Keyword.validate!(converter_opts, [:out_format, :out_width, :out_height])
 
-    if is_nil(opts[:format]) and is_nil(opts[:width]) and is_nil(opts[:height]) do
-      raise "At least one of `format`, `width` or `height` must be provided"
+    if is_nil(opts[:out_format]) and is_nil(opts[:out_width]) and is_nil(opts[:out_height]) do
+      raise "At least one of `out_format`, `out_width` or `out_height` must be provided"
     end
 
-    with {:ok, converter} <- NIF.new(opts[:format], opts[:width] || -1, opts[:height] || -1) do
-      {:ok,
-       %__MODULE__{
-         converter: converter,
-         format: opts[:format],
-         width: opts[:width],
-         height: opts[:height]
-       }}
-    end
-  end
+    converter = NIF.new(opts[:out_format], opts[:out_width] || -1, opts[:out_height] || -1)
 
-  @doc """
-  Same as `new/1` but raises an exception in case of an error.
-  """
-  @spec new!(converter_opts()) :: t()
-  def new!(converter_opts) do
-    case new(converter_opts) do
-      {:ok, ref} -> ref
-      {:error, reason} -> raise "Couldn't create a video converter. Reason: #{inspect(reason)}"
-    end
+    %__MODULE__{
+      converter: converter,
+      out_format: opts[:out_format],
+      out_width: opts[:out_width],
+      out_height: opts[:out_height]
+    }
   end
 
   @doc """
@@ -72,7 +60,7 @@ defmodule Xav.VideoConverter do
   """
   @spec convert(t(), Frame.t()) :: Frame.t()
   def convert(
-        %__MODULE__{format: format, width: nil, height: nil},
+        %__MODULE__{out_format: format, out_width: nil, out_height: nil},
         %Frame{format: format} = frame
       ),
       do: frame
