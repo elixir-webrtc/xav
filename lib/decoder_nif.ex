@@ -8,7 +8,9 @@ defmodule Xav.Decoder.NIF do
     :ok = :erlang.load_nif(path, 0)
   end
 
-  def new(_codec, _out_format, _out_sample_rate, _out_channels), do: :erlang.nif_error(:undef)
+  def new(_codec, _out_format, _out_sample_rate, _out_channels, _out_width, _out_height) do
+    :erlang.nif_error(:undef)
+  end
 
   def decode(_decoder, _data, _pts, _dts), do: :erlang.nif_error(:undef)
 

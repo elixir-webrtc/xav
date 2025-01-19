@@ -5,7 +5,7 @@ static int init_video_converter(struct XavReader *xav_reader, AVFrame *frame);
 
 ErlNifResourceType *xav_reader_resource_type;
 
-ERL_NIF_TERM new(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   if (argc != 6) {
     return xav_nif_raise(env, "invalid_arg_count");
   }
@@ -290,8 +290,8 @@ static int init_video_converter(struct XavReader *xav_reader, AVFrame *frame) {
     return -1;
   }
 
-  return video_converter_init(xav_reader->vc, frame->width, frame->height, 
-                                  frame->format, AV_PIX_FMT_RGB24);
+  return video_converter_init(xav_reader->vc, frame->width, frame->height, frame->format,
+                              frame->width, frame->height, AV_PIX_FMT_RGB24);
 }
 
 void free_xav_reader(ErlNifEnv *env, void *obj) {

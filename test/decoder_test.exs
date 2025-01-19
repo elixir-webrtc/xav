@@ -365,5 +365,14 @@ defmodule Xav.DecoderTest do
 
       assert byte_size(frame) == 640 * 480 * 3
     end
+
+    test "scale video frame" do
+      decoder = Xav.Decoder.new(:vp8, out_width: 240, out_height: 180)
+
+      assert {:ok, %Xav.Frame{width: 240, height: 180, pts: 0, data: frame, format: :yuv420p}} =
+               Xav.Decoder.decode(decoder, @vp8_keyframe)
+
+      assert byte_size(frame) == 240 * 180 * 3 / 2
+    end
   end
 end
