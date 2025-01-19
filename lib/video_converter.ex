@@ -45,6 +45,8 @@ defmodule Xav.VideoConverter do
       raise "At least one of `out_format`, `out_width` or `out_height` must be provided"
     end
 
+    :ok = validate_converter_options(opts)
+
     converter = NIF.new(opts[:out_format], opts[:out_width] || -1, opts[:out_height] || -1)
 
     %__MODULE__{
@@ -77,5 +79,29 @@ defmodule Xav.VideoConverter do
       height: height,
       pts: frame.pts
     }
+  end
+
+  defp validate_converter_options([]), do: :ok
+
+  defp validate_converter_options([{_key, nil} | opts]) do
+    validate_converter_options(opts)
+  end
+
+  defp validate_converter_options([{key, value} | _opts])
+       when key in [:out_width, :out_height] and not is_integer(value) do
+    raise %ArgumentError{
+      message: "Expected an integer value for #{inspect(key)}, received: #{inspect(value)}"
+    }
+  end
+
+  defp validate_converter_options([{key, value} | _opts])
+       when key in [:out_width, :out_height] and value < 1 do
+    raise %ArgumentError{
+      message: "Invalid value for #{inspect(key)}, expected a value to be >= 1"
+    }
+  end
+
+  defp validate_converter_options([{_key, _value} | opts]) do
+    validate_converter_options(opts)
   end
 end
