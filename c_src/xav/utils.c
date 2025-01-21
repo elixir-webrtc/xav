@@ -1,5 +1,4 @@
 #include "utils.h"
-#include <libavutil/imgutils.h>
 #include <libavutil/mathematics.h>
 #include <libavutil/opt.h>
 #include <stdint.h>
@@ -20,19 +19,35 @@ ERL_NIF_TERM xav_nif_raise(ErlNifEnv *env, char *msg) {
   return enif_raise_exception(env, reason);
 }
 
-int xav_get_atom(ErlNifEnv *env, ERL_NIF_TERM atom, char **value) {
+int xav_get_atom(ErlNifEnv *env, ERL_NIF_TERM term, char *value[]) {
   unsigned int atom_len;
-  if (!enif_get_atom_length(env, atom, &atom_len, ERL_NIF_LATIN1)) {
+  if (!enif_get_atom_length(env, term, &atom_len, ERL_NIF_LATIN1)) {
     return 0;
   }
 
-  char *format = (char *)XAV_ALLOC((atom_len * 1) * sizeof(char *));
-  if (!enif_get_atom(env, atom, format, atom_len + 1, ERL_NIF_LATIN1)) {
-    XAV_FREE(format);
+  char *atom_value = (char *)XAV_ALLOC((atom_len + 1) * sizeof(char *));
+  if (!enif_get_atom(env, term, atom_value, atom_len + 1, ERL_NIF_LATIN1)) {
+    XAV_FREE(atom_value);
     return 0;
   }
 
-  *value = format;
+  *value = atom_value;
+  return 1;
+}
+
+int xav_get_string(ErlNifEnv *env, ERL_NIF_TERM term, char *value[]) {
+  unsigned int string_len;
+  if (!enif_get_atom_length(env, term, &string_len, ERL_NIF_LATIN1)) {
+    return 0;
+  }
+
+  char *string_value = (char *)XAV_ALLOC((string_len + 1) * sizeof(char *));
+  if (!enif_get_string(env, term, string_value, string_len + 1, ERL_NIF_LATIN1)) {
+    XAV_FREE(string_value);
+    return 0;
+  }
+
+  *value = string_value;
   return 1;
 }
 
@@ -65,4 +80,18 @@ ERL_NIF_TERM xav_nif_video_frame_to_term(ErlNifEnv *env, AVFrame *frame) {
   ERL_NIF_TERM width_term = enif_make_int(env, frame->width);
   ERL_NIF_TERM pts_term = enif_make_int64(env, frame->pts);
   return enif_make_tuple(env, 5, data_term, format_term, width_term, height_term, pts_term);
+}
+
+ERL_NIF_TERM xav_nif_packet_to_term(ErlNifEnv *env, AVPacket *packet) {
+  ERL_NIF_TERM data_term;
+
+  unsigned char *ptr = enif_make_new_binary(env, packet->size, &data_term);
+
+  memcpy(ptr, packet->data, packet->size);
+
+  ERL_NIF_TERM dts = enif_make_int(env, packet->dts);
+  ERL_NIF_TERM pts = enif_make_int(env, packet->pts);
+  ERL_NIF_TERM is_keyframe =
+      enif_make_atom(env, packet->flags & AV_PKT_FLAG_KEY ? "true" : "false");
+  return enif_make_tuple(env, 4, data_term, dts, pts, is_keyframe);
 }

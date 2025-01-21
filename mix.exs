@@ -56,6 +56,7 @@ defmodule Xav.MixProject do
     [
       {:nx, "~> 0.7", optional: true},
       {:elixir_make, "~> 0.7", runtime: false},
+      {:nimble_options, "~> 1.0"},
 
       # dev/test
       # bumblebee and exla for testing speech to text
