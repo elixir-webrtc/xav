@@ -11,6 +11,7 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
   ERL_NIF_TERM ret;
   struct EncoderConfig encoder_config = {0};
+  encoder_config.max_b_frames = -1;
   char *codec = NULL, *format = NULL;
 
   ErlNifMapIterator iter;
@@ -55,6 +56,10 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
       err = enif_get_int(env, value, &encoder_config.time_base.num);
     } else if (strcmp(config_name, "time_base_den") == 0) {
       err = enif_get_int(env, value, &encoder_config.time_base.den);
+    } else if (strcmp(config_name, "gop_size") == 0) {
+      err = enif_get_int(env, value, &encoder_config.gop_size);
+    } else if (strcmp(config_name, "max_b_frames") == 0) {
+      err = enif_get_int(env, value, &encoder_config.max_b_frames);
     } else {
       ret = xav_nif_raise(env, "unknown_config_key");
       goto clean;

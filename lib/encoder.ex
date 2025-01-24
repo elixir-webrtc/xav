@@ -43,6 +43,24 @@ defmodule Xav.Encoder do
       it is used for the decoding and presentation timestamps of the video frames. For video frames with constant
       frame rate, choose a timebase of `{1, frame_rate}`.
       """
+    ],
+    gop_size: [
+      type: :pos_integer,
+      doc: """
+      Group of pictures length.
+
+      Determines the interval in which I-Frames (or keyframes) are inserted in
+      the stream. e.g. a value of 50, means the I-Frame will be inserted at the 1st frame,
+      the 51st frame, the 101st frame, and so on.
+      """
+    ],
+    max_b_frames: [
+      type: :non_neg_integer,
+      doc: """
+      Maximum number of consecutive B-Frames to insert between non-B-Frames.
+
+      A value of 0, disable insertion of B-Frames.
+      """
     ]
   ]
 

@@ -31,9 +31,28 @@ int encoder_init(struct Encoder *encoder, struct EncoderConfig *config) {
   encoder->c->pix_fmt = config->format;
   encoder->c->time_base = config->time_base;
 
+  if (config->gop_size > 0) {
+    encoder->c->gop_size = config->gop_size;
+  }
+
+  if (config->max_b_frames >= 0) {
+    encoder->c->max_b_frames = config->max_b_frames;
+  }
+
   AVDictionary *opts = NULL;
   if (config->codec == AV_CODEC_ID_HEVC) {
-    av_dict_set(&opts, "x265-params", "log-level=warning", 0);
+    char x265_params[256] = "log-level=warning";
+    if (config->gop_size > 0) {
+      sprintf(x265_params + strlen(x265_params), ":keyint=%d", config->gop_size);
+    }
+
+    if (config->max_b_frames >= 0) {
+      sprintf(x265_params + strlen(x265_params), ":bframes=%d", config->max_b_frames);
+    }
+
+    printf("%s\n", x265_params);
+
+    av_dict_set(&opts, "x265-params", x265_params, 0);
   }
 
   return avcodec_open2(encoder->c, encoder->codec, &opts);

@@ -16,6 +16,8 @@ struct EncoderConfig {
   int height;
   enum AVPixelFormat format;
   AVRational time_base;
+  int gop_size;
+  int max_b_frames;
 };
 
 struct Encoder *encoder_alloc();
