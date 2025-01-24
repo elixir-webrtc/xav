@@ -33,7 +33,16 @@ defmodule Xav.Encoder do
     time_base: [
       type: {:tuple, [:pos_integer, :pos_integer]},
       required: true,
-      doc: "Time base of the video stream."
+      doc: """
+      Time base of the video stream.
+
+      It is a rational represented as a tuple of two postive integers `{numerator, denominator}`.
+      It represent the number of ticks `denominator` in `numerator` seconds. e.g. `{1, 90000}` reprensents
+      90000 ticks in 1 second.
+
+      it is used for the decoding and presentation timestamps of the video frames. For video frames with constant
+      frame rate, choose a timebase of `{1, frame_rate}`.
+      """
     ]
   ]
 
@@ -57,13 +66,16 @@ defmodule Xav.Encoder do
   end
 
   @doc """
-  Encode a frame.
+  Encodes a frame.
+
+  The return value may be an empty list in case the encoder
+  needs more frames to produce a packet.
   """
   @spec encode(t(), Xav.Frame.t()) :: [Xav.Packet.t()]
   def encode(encoder, frame) do
     encoder
     |> Xav.Encoder.NIF.encode(frame.data, frame.pts)
-    |> map_result_to_packets()
+    |> to_packets()
   end
 
   @doc """
@@ -73,10 +85,10 @@ defmodule Xav.Encoder do
   def flush(encoder) do
     encoder
     |> Xav.Encoder.NIF.flush()
-    |> map_result_to_packets()
+    |> to_packets()
   end
 
-  defp map_result_to_packets(result) do
+  defp to_packets(result) do
     Enum.map(result, fn {data, dts, pts, keyframe?} ->
       %Xav.Packet{data: data, dts: dts, pts: pts, keyframe?: keyframe?}
     end)

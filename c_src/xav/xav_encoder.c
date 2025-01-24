@@ -11,13 +11,14 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
   ERL_NIF_TERM ret;
   struct EncoderConfig encoder_config = {0};
+  char *codec = NULL, *format = NULL;
 
   ErlNifMapIterator iter;
   ERL_NIF_TERM key, value;
   char *config_name = NULL;
   int err;
 
-  if (!xav_get_atom(env, argv[0], &encoder_config.codec_str)) {
+  if (!xav_nif_get_atom(env, argv[0], &codec)) {
     return xav_nif_raise(env, "failed_to_get_atom");
   }
 
@@ -25,11 +26,10 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "failed_to_get_map");
   }
 
-  if (strcmp(encoder_config.codec_str, "h264") == 0) {
+  if (strcmp(codec, "h264") == 0) {
     encoder_config.media_type = AVMEDIA_TYPE_VIDEO;
     encoder_config.codec = AV_CODEC_ID_H264;
-  } else if (strcmp(encoder_config.codec_str, "h265") == 0 ||
-             strcmp(encoder_config.codec_str, "hevc") == 0) {
+  } else if (strcmp(codec, "h265") == 0 || strcmp(codec, "hevc") == 0) {
     encoder_config.media_type = AVMEDIA_TYPE_VIDEO;
     encoder_config.codec = AV_CODEC_ID_HEVC;
   } else {
@@ -40,7 +40,7 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   enif_map_iterator_create(env, argv[1], &iter, ERL_NIF_MAP_ITERATOR_FIRST);
 
   while (enif_map_iterator_get_pair(env, &iter, &key, &value)) {
-    if (!xav_get_atom(env, key, &config_name)) {
+    if (!xav_nif_get_atom(env, key, &config_name)) {
       ret = xav_nif_raise(env, "failed_to_get_map_key");
       goto clean;
     }
@@ -50,7 +50,7 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     } else if (strcmp(config_name, "height") == 0) {
       err = enif_get_int(env, value, &encoder_config.height);
     } else if (strcmp(config_name, "format") == 0) {
-      err = xav_get_atom(env, value, &encoder_config.format_str);
+      err = xav_nif_get_atom(env, value, &format);
     } else if (strcmp(config_name, "time_base_num") == 0) {
       err = enif_get_int(env, value, &encoder_config.time_base.num);
     } else if (strcmp(config_name, "time_base_den") == 0) {
@@ -69,7 +69,7 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     enif_map_iterator_next(env, &iter);
   }
 
-  encoder_config.format = av_get_pix_fmt(encoder_config.format_str);
+  encoder_config.format = av_get_pix_fmt(format);
   if (encoder_config.format == AV_PIX_FMT_NONE) {
     ret = xav_nif_raise(env, "unknown_format");
     goto clean;
@@ -89,10 +89,10 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   enif_release_resource(xav_encoder);
 
 clean:
-  if (!encoder_config.codec_str)
-    XAV_FREE(encoder_config.codec_str);
-  if (!encoder_config.format_str)
-    XAV_FREE(encoder_config.format_str);
+  if (!codec)
+    XAV_FREE(codec);
+  if (!format)
+    XAV_FREE(format);
   if (!config_name)
     XAV_FREE(config_name);
   enif_map_iterator_destroy(env, &iter);
@@ -172,12 +172,19 @@ void free_xav_encoder(ErlNifEnv *env, void *obj) {
 }
 
 static ERL_NIF_TERM packets_to_term(ErlNifEnv *env, struct Encoder *encoder) {
-  ERL_NIF_TERM packets[encoder->num_packets];
+  ERL_NIF_TERM ret;
+  ERL_NIF_TERM *packets = XAV_ALLOC(sizeof(ERL_NIF_TERM) * encoder->num_packets);
   for (int i = 0; i < encoder->num_packets; i++) {
     packets[i] = xav_nif_packet_to_term(env, encoder->packets[i]);
   }
 
-  return enif_make_list_from_array(env, packets, encoder->num_packets);
+  ret = enif_make_list_from_array(env, packets, encoder->num_packets);
+
+  for (int i = 0; i < encoder->num_packets; i++)
+    av_packet_unref(encoder->packets[i]);
+  XAV_FREE(packets);
+
+  return ret;
 }
 
 static ErlNifFunc xav_funcs[] = {{"new", 2, new}, {"encode", 3, encode}, {"flush", 1, flush}};

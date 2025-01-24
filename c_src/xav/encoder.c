@@ -5,10 +5,10 @@ struct Encoder *encoder_alloc() {
   encoder->c = NULL;
   encoder->codec = NULL;
   encoder->num_packets = 0;
-  encoder->size_packets = 8;
-  encoder->packets = XAV_ALLOC(encoder->size_packets * sizeof(AVPacket *));
+  encoder->max_num_packets = 8;
+  encoder->packets = XAV_ALLOC(encoder->max_num_packets * sizeof(AVPacket *));
 
-  for (int i = 0; i < encoder->size_packets; i++) {
+  for (int i = 0; i < encoder->max_num_packets; i++) {
     encoder->packets[i] = av_packet_alloc();
   }
 
@@ -55,10 +55,11 @@ int encoder_encode(struct Encoder *encoder, AVFrame *frame) {
       return ret;
     }
 
-    if (++encoder->num_packets >= encoder->size_packets) {
-      encoder->size_packets *= 2;
-      encoder->packets = XAV_REALLOC(encoder->packets, encoder->size_packets * sizeof(AVPacket *));
-      for (int i = encoder->num_packets; i < encoder->size_packets; i++) {
+    if (++encoder->num_packets >= encoder->max_num_packets) {
+      encoder->max_num_packets *= 2;
+      encoder->packets =
+          XAV_REALLOC(encoder->packets, encoder->max_num_packets * sizeof(AVPacket *));
+      for (int i = encoder->num_packets; i < encoder->max_num_packets; i++) {
         encoder->packets[i] = av_packet_alloc();
       }
     }
@@ -75,7 +76,7 @@ void encoder_free(struct Encoder **encoder) {
       avcodec_free_context(&e->c);
     }
 
-    for (int i = 0; i < e->size_packets; i++) {
+    for (int i = 0; i < e->max_num_packets; i++) {
       av_packet_free(&e->packets[i]);
     }
 

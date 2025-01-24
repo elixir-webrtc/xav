@@ -19,7 +19,7 @@ ERL_NIF_TERM xav_nif_raise(ErlNifEnv *env, char *msg) {
   return enif_raise_exception(env, reason);
 }
 
-int xav_get_atom(ErlNifEnv *env, ERL_NIF_TERM term, char *value[]) {
+int xav_nif_get_atom(ErlNifEnv *env, ERL_NIF_TERM term, char **value) {
   unsigned int atom_len;
   if (!enif_get_atom_length(env, term, &atom_len, ERL_NIF_LATIN1)) {
     return 0;
@@ -32,22 +32,6 @@ int xav_get_atom(ErlNifEnv *env, ERL_NIF_TERM term, char *value[]) {
   }
 
   *value = atom_value;
-  return 1;
-}
-
-int xav_get_string(ErlNifEnv *env, ERL_NIF_TERM term, char *value[]) {
-  unsigned int string_len;
-  if (!enif_get_atom_length(env, term, &string_len, ERL_NIF_LATIN1)) {
-    return 0;
-  }
-
-  char *string_value = (char *)XAV_ALLOC((string_len + 1) * sizeof(char *));
-  if (!enif_get_string(env, term, string_value, string_len + 1, ERL_NIF_LATIN1)) {
-    XAV_FREE(string_value);
-    return 0;
-  }
-
-  *value = string_value;
   return 1;
 }
 

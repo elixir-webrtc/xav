@@ -5,17 +5,15 @@ struct Encoder {
   const AVCodec *codec;
   AVCodecContext *c;
   int num_packets;
-  int size_packets;
+  int max_num_packets;
   AVPacket **packets;
 };
 
 struct EncoderConfig {
   enum AVMediaType media_type;
-  char *codec_str;
   enum AVCodecID codec;
   int width;
   int height;
-  char *format_str;
   enum AVPixelFormat format;
   AVRational time_base;
 };
