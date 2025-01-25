@@ -31,6 +31,10 @@ int encoder_init(struct Encoder *encoder, struct EncoderConfig *config) {
   encoder->c->pix_fmt = config->format;
   encoder->c->time_base = config->time_base;
 
+  if (config->profile != FF_PROFILE_UNKNOWN) {
+    encoder->c->profile = config->profile;
+  }
+
   if (config->gop_size > 0) {
     encoder->c->gop_size = config->gop_size;
   }
@@ -49,8 +53,6 @@ int encoder_init(struct Encoder *encoder, struct EncoderConfig *config) {
     if (config->max_b_frames >= 0) {
       sprintf(x265_params + strlen(x265_params), ":bframes=%d", config->max_b_frames);
     }
-
-    printf("%s\n", x265_params);
 
     av_dict_set(&opts, "x265-params", x265_params, 0);
   }

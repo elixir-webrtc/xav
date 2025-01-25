@@ -18,6 +18,7 @@ struct EncoderConfig {
   AVRational time_base;
   int gop_size;
   int max_b_frames;
+  int profile;
 };
 
 struct Encoder *encoder_alloc();

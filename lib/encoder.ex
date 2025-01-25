@@ -61,6 +61,23 @@ defmodule Xav.Encoder do
 
       A value of 0, disable insertion of B-Frames.
       """
+    ],
+    profile: [
+      type: {:in, [:constrained_baseline, :baseline, :main, :high, :main_10, :main_still_picture]},
+      type_doc: "`t:atom/0`",
+      doc: """
+      The encoder's profile.
+
+      A profile defines the capabilities and features an encoder can use to
+      target specific applications (e.g. `live video`)
+
+      The following profiles are defined:
+
+      | Codec | Profiles |
+      |-------|----------|
+      | h264  | constrained_baseline, baseline, main, high |
+      | h265/hevc  | main, main_10, main_still_picture |
+      """
     ]
   ]
 
