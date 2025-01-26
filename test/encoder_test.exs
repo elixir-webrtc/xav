@@ -108,6 +108,7 @@ defmodule Xav.EncoderTest do
         )
         |> Enum.to_list()
 
+      assert length(packets) == 20
       Enum.all?(packets, &(&1.dts == &1.pts))
     end
   end
