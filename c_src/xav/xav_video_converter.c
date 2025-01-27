@@ -29,7 +29,7 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   int width, height;
   char *format = NULL;
 
-  if (!xav_get_atom(env, argv[0], &format)) {
+  if (!xav_nif_get_atom(env, argv[0], &format)) {
     return xav_nif_raise(env, "failed_to_get_atom");
   }
 
@@ -97,7 +97,7 @@ ERL_NIF_TERM convert(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "failed_to_get_int");
   }
 
-  if (!xav_get_atom(env, argv[4], &format)) {
+  if (!xav_nif_get_atom(env, argv[4], &format)) {
     return xav_nif_raise(env, "failed_to_get_atom");
   }
 

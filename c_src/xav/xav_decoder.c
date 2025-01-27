@@ -22,7 +22,7 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   char *out_format = NULL;
 
   // resolve codec
-  if (!xav_get_atom(env, argv[0], &codec)) {
+  if (!xav_nif_get_atom(env, argv[0], &codec)) {
     return xav_nif_raise(env, "failed_to_get_atom");
   }
 
@@ -46,7 +46,7 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   }
 
   // resolve output format
-  if (!xav_get_atom(env, argv[1], &out_format)) {
+  if (!xav_nif_get_atom(env, argv[1], &out_format)) {
     ret = xav_nif_raise(env, "failed_to_get_atom");
     goto clean;
   }

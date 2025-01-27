@@ -6,6 +6,7 @@
 XAV_DIR = c_src/xav
 PRIV_DIR = $(MIX_APP_PATH)/priv
 XAV_DECODER_SO = $(PRIV_DIR)/libxavdecoder.so
+XAV_ENCODER_SO = $(PRIV_DIR)/libxavencoder.so
 XAV_READER_SO = $(PRIV_DIR)/libxavreader.so
 XAV_VIDEO_CONVERTER_SO = $(PRIV_DIR)/libxavvideoconverter.so
 
@@ -14,6 +15,9 @@ XAV_VIDEO_CONVERTER_SO = $(PRIV_DIR)/libxavvideoconverter.so
 
 DECODER_HEADERS = $(XAV_DIR)/xav_decoder.h $(XAV_DIR)/decoder.h $(XAV_DIR)/video_converter.h $(XAV_DIR)/audio_converter.h $(XAV_DIR)/utils.h $(XAV_DIR)/channel_layout.h
 DECODER_SOURCES = $(XAV_DIR)/xav_decoder.c $(XAV_DIR)/decoder.c $(XAV_DIR)/video_converter.c $(XAV_DIR)/audio_converter.c $(XAV_DIR)/utils.c
+
+ENCODER_HEADERS = $(XAV_DIR)/xav_encoder.h $(XAV_DIR)/encoder.h $(XAV_DIR)/utils.h
+ENCODER_SOURCES = $(XAV_DIR)/xav_encoder.c $(XAV_DIR)/encoder.c $(XAV_DIR)/utils.c
 
 READER_HEADERS = $(XAV_DIR)/xav_reader.h $(XAV_DIR)/reader.h $(XAV_DIR)/video_converter.h $(XAV_DIR)/audio_converter.h $(XAV_DIR)/utils.h $(XAV_DIR)/channel_layout.h
 READER_SOURCES = $(XAV_DIR)/xav_reader.c $(XAV_DIR)/reader.c $(XAV_DIR)/video_converter.c $(XAV_DIR)/audio_converter.c $(XAV_DIR)/utils.c
@@ -42,7 +46,7 @@ ifneq (,$(wildcard /etc/fedora-release))
 	LFLAGS += $$(pkg-config --libs-only-L libavcodec libswscale libavutil libavformat libavdevice libswresample)
 endif
 
-all: $(XAV_DECODER_SO) $(XAV_READER_SO) $(XAV_VIDEO_CONVERTER_SO)
+all: $(XAV_DECODER_SO) $(XAV_READER_SO) $(XAV_VIDEO_CONVERTER_SO) $(XAV_ENCODER_SO)
 
 $(XAV_DECODER_SO): Makefile $(DECODER_SOURCES) $(DECODER_HEADERS)
 	mkdir -p $(PRIV_DIR)
@@ -55,6 +59,11 @@ $(XAV_READER_SO): Makefile $(READER_SOURCES) $(READER_HEADERS)
 $(XAV_VIDEO_CONVERTER_SO): Makefile $(VIDEO_CONVERTER_SOURCES) $(VIDEO_CONVERTER_HEADERS)
 	mkdir -p $(PRIV_DIR)
 	$(CC) $(CFLAGS) $(IFLAGS) $(LFLAGS) $(VIDEO_CONVERTER_SOURCES) -o $(XAV_VIDEO_CONVERTER_SO) $(LDFLAGS)
+
+
+$(XAV_ENCODER_SO): Makefile $(ENCODER_SOURCES) $(ENCODER_HEADERS)
+	mkdir -p $(PRIV_DIR)
+	$(CC) $(CFLAGS) $(IFLAGS) $(LFLAGS) $(ENCODER_SOURCES) -o $(XAV_ENCODER_SO) $(LDFLAGS)
 
 format:
 	clang-format -i $(XAV_DIR)/*
