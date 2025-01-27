@@ -15,37 +15,44 @@ defmodule Xav.VideoConverter do
           out_height: Frame.height()
         }
 
-  @typedoc """
-  Type definition for converter options.
+  @converter_schema [
+    out_width: [
+      type: :pos_integer,
+      required: false,
+      doc: """
+      scale the video frame to this width
 
-  * `out_format` - video format to convert to (`e.g. :rgb24`).
-  * `out_width` - scale the video frame to this width.
-  * `out_height` - scale the video frame to this height.
-
-  If `out_width` and `out_height` are both not provided, scaling is not performed. If one of the
-  dimensions is `nil`, the other will be calculated based on the input dimensions as
-  to keep the aspect ratio.
-  """
-  @type converter_opts() :: [
-          out_format: Frame.video_format(),
-          out_width: Frame.width(),
-          out_height: Frame.height()
-        ]
+      If `out_width` and `out_height` are both not provided, scaling is not performed. If one of the
+      dimensions is `nil`, the other will be calculated based on the input dimensions as
+      to keep the aspect ratio.
+      """
+    ],
+    out_height: [
+      type: :pos_integer,
+      required: false,
+      doc: "scale the video frame to this height"
+    ],
+    out_format: [
+      type: :atom,
+      required: false,
+      doc: "video format to convert to (e.g. `:rgb24`)"
+    ]
+  ]
 
   defstruct [:converter, :out_format, :out_width, :out_height]
 
   @doc """
   Creates a new video converter.
+
+  The following options can be passed:\n#{NimbleOptions.docs(@converter_schema)}
   """
-  @spec new(converter_opts()) :: t()
+  @spec new(Keyword.t()) :: t()
   def new(converter_opts) do
-    opts = Keyword.validate!(converter_opts, [:out_format, :out_width, :out_height])
+    opts = NimbleOptions.validate!(converter_opts, @converter_schema)
 
     if is_nil(opts[:out_format]) and is_nil(opts[:out_width]) and is_nil(opts[:out_height]) do
       raise "At least one of `out_format`, `out_width` or `out_height` must be provided"
     end
-
-    :ok = validate_converter_options(opts)
 
     converter = NIF.new(opts[:out_format], opts[:out_width] || -1, opts[:out_height] || -1)
 
@@ -79,29 +86,5 @@ defmodule Xav.VideoConverter do
       height: height,
       pts: frame.pts
     }
-  end
-
-  defp validate_converter_options([]), do: :ok
-
-  defp validate_converter_options([{_key, nil} | opts]) do
-    validate_converter_options(opts)
-  end
-
-  defp validate_converter_options([{key, value} | _opts])
-       when key in [:out_width, :out_height] and not is_integer(value) do
-    raise %ArgumentError{
-      message: "Expected an integer value for #{inspect(key)}, received: #{inspect(value)}"
-    }
-  end
-
-  defp validate_converter_options([{key, value} | _opts])
-       when key in [:out_width, :out_height] and value < 1 do
-    raise %ArgumentError{
-      message: "Invalid value for #{inspect(key)}, expected a value to be >= 1"
-    }
-  end
-
-  defp validate_converter_options([{_key, _value} | opts]) do
-    validate_converter_options(opts)
   end
 end

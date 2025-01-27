@@ -1,6 +1,8 @@
 defmodule Xav.VideoConverterTest do
   use ExUnit.Case, async: true
 
+  alias NimbleOptions.ValidationError
+
   describe "new/1" do
     test "new converter" do
       assert %Xav.VideoConverter{out_format: :rgb24, converter: converter} =
@@ -14,8 +16,8 @@ defmodule Xav.VideoConverterTest do
     end
 
     test "fails on invalid options" do
-      assert_raise ArgumentError, fn -> Xav.VideoConverter.new(out_width: 0) end
-      assert_raise ArgumentError, fn -> Xav.VideoConverter.new(out_height: "15") end
+      assert_raise ValidationError, fn -> Xav.VideoConverter.new(out_width: 0) end
+      assert_raise ValidationError, fn -> Xav.VideoConverter.new(out_height: "15") end
     end
   end
 
