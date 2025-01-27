@@ -3,20 +3,37 @@ defmodule Xav.Reader do
   Audio/video file reader.
   """
 
-  @typedoc """
-  Reader options.
+  @audio_out_formats [:u8, :s16, :s32, :s64, :f32, :f64]
 
-  * `read` - determines which stream to read from a file.
-  Defaults to `:video`.
-  * `device?` - determines whether path points to the camera. Defaults to `false`.
-  """
-  @type opts :: [
-          read: :audio | :video,
-          device?: boolean,
-          out_format: Xav.Frame.format(),
-          out_sample_rate: integer(),
-          out_channels: integer()
-        ]
+  @reader_options_schema [
+    read: [
+      type: {:in, [:audio, :video]},
+      default: :video,
+      doc: "The type of the stream to read from the input, either `video` or `audio`"
+    ],
+    device?: [
+      type: :boolean,
+      default: false,
+      doc: "Whether the path points to the camera"
+    ],
+    out_format: [
+      type: {:in, @audio_out_formats},
+      doc: """
+      The output format of the audio samples. It should be one of
+      the following values: `#{Enum.join(@audio_out_formats, ", ")}`.
+
+      For video samples, it is always `:rgb24`.
+      """
+    ],
+    out_sample_rate: [
+      type: :pos_integer,
+      doc: "The output sample rate of the audio samples"
+    ],
+    out_channels: [
+      type: :pos_integer,
+      doc: "The output number of channels of the audio samples"
+    ]
+  ]
 
   @type t() :: %__MODULE__{
           reader: reference(),
@@ -37,9 +54,9 @@ defmodule Xav.Reader do
               [:in_sample_rate, :out_sample_rate, :in_channels, :out_channels, :framerate]
 
   @doc """
-  The same as new/1 but raises on error.
+  The same as `new/1` but raises on error.
   """
-  @spec new!(String.t(), opts()) :: t()
+  @spec new!(String.t(), Keyword.t()) :: t()
   def new!(path, opts \\ []) do
     case new(path, opts) do
       {:ok, reader} -> reader
@@ -56,57 +73,12 @@ defmodule Xav.Reader do
 
   Microphone input is not supported.
 
-  `opts` can be used to specify desired output parameters.
-  Video frames are always returned in RGB format. This setting cannot be changed.
-  Audio samples are always in the packed form.
-  See `Xav.Decoder.new/2` for more information.
+  The following options can be provided:\n#{NimbleOptions.docs(@reader_options_schema)}
   """
-  @spec new(String.t(), opts()) :: {:ok, t()} | {:error, term()}
+  @spec new(String.t(), Keyword.t()) :: {:ok, t()} | {:error, term()}
   def new(path, opts \\ []) do
-    read = opts[:read] || :video
-    device? = opts[:device?] || false
-    out_format = opts[:out_format]
-    out_sample_rate = opts[:out_sample_rate] || 0
-    out_channels = opts[:out_channels] || 0
-
-    case Xav.Reader.NIF.new(
-           path,
-           to_int(device?),
-           to_int(read),
-           out_format,
-           out_sample_rate,
-           out_channels
-         ) do
-      {:ok, reader, in_format, out_format, in_sample_rate, out_sample_rate, in_channels,
-       out_channels, bit_rate, duration, codec} ->
-        {:ok,
-         %__MODULE__{
-           reader: reader,
-           in_format: in_format,
-           out_format: out_format,
-           in_sample_rate: in_sample_rate,
-           out_sample_rate: out_sample_rate,
-           in_channels: in_channels,
-           out_channels: out_channels,
-           bit_rate: bit_rate,
-           duration: duration,
-           codec: to_human_readable(codec)
-         }}
-
-      {:ok, reader, in_format, out_format, bit_rate, duration, codec, framerate} ->
-        {:ok,
-         %__MODULE__{
-           reader: reader,
-           in_format: in_format,
-           out_format: out_format,
-           bit_rate: bit_rate,
-           duration: duration,
-           codec: to_human_readable(codec),
-           framerate: framerate
-         }}
-
-      {:error, _reason} = err ->
-        err
+    with {:ok, opts} <- NimbleOptions.validate(opts, @reader_options_schema) do
+      do_create_reader(path, opts)
     end
   end
 
@@ -144,8 +116,10 @@ defmodule Xav.Reader do
 
   @doc """
   Creates a new reader stream.
+
+  Check `new/1` for the available options.
   """
-  @spec stream!(String.t(), opts()) :: Enumerable.t()
+  @spec stream!(String.t(), Keyword.t()) :: Enumerable.t()
   def stream!(path, opts \\ []) do
     Stream.resource(
       fn ->
@@ -165,6 +139,51 @@ defmodule Xav.Reader do
       end,
       fn _reader -> :ok end
     )
+  end
+
+  defp do_create_reader(path, opts) do
+    out_sample_rate = opts[:out_sample_rate] || 0
+    out_channels = opts[:out_channels] || 0
+
+    case Xav.Reader.NIF.new(
+           path,
+           to_int(opts[:device?]),
+           to_int(opts[:read]),
+           opts[:out_format],
+           out_sample_rate,
+           out_channels
+         ) do
+      {:ok, reader, in_format, out_format, in_sample_rate, out_sample_rate, in_channels,
+       out_channels, bit_rate, duration, codec} ->
+        {:ok,
+         %__MODULE__{
+           reader: reader,
+           in_format: in_format,
+           out_format: out_format,
+           in_sample_rate: in_sample_rate,
+           out_sample_rate: out_sample_rate,
+           in_channels: in_channels,
+           out_channels: out_channels,
+           bit_rate: bit_rate,
+           duration: duration,
+           codec: to_human_readable(codec)
+         }}
+
+      {:ok, reader, in_format, out_format, bit_rate, duration, codec, framerate} ->
+        {:ok,
+         %__MODULE__{
+           reader: reader,
+           in_format: in_format,
+           out_format: out_format,
+           bit_rate: bit_rate,
+           duration: duration,
+           codec: to_human_readable(codec),
+           framerate: framerate
+         }}
+
+      {:error, _reason} = err ->
+        err
+    end
   end
 
   defp to_human_readable(:libdav1d), do: :av1

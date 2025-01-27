@@ -63,7 +63,8 @@ defmodule Xav.Encoder do
       """
     ],
     profile: [
-      type: {:in, [:constrained_baseline, :baseline, :main, :high, :main_10, :main_still_picture]},
+      type:
+        {:in, [:constrained_baseline, :baseline, :main, :high, :main_10, :main_still_picture]},
       type_doc: "`t:atom/0`",
       doc: """
       The encoder's profile.
