@@ -267,6 +267,41 @@ ERL_NIF_TERM flush(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   return xav_nif_ok(env, enif_make_list_from_array(env, frame_terms, frames_count));
 }
 
+ERL_NIF_TERM pixel_formats(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  ERL_NIF_TERM result = enif_make_list(env, 0);
+
+  const AVPixFmtDescriptor *desc = NULL;
+
+  while ((desc = av_pix_fmt_desc_next(desc))) {
+    ERL_NIF_TERM name = enif_make_atom(env, desc->name);
+    ERL_NIF_TERM nb_components = enif_make_int(env, desc->nb_components);
+    ERL_NIF_TERM is_hwaccel =
+        enif_make_atom(env, desc->flags & AV_PIX_FMT_FLAG_HWACCEL ? "true" : "false");
+
+    result =
+        enif_make_list_cell(env, enif_make_tuple3(env, name, nb_components, is_hwaccel), result);
+  }
+
+  return result;
+}
+
+ERL_NIF_TERM sample_formats(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  ERL_NIF_TERM result = enif_make_list(env, 0);
+
+  for (int fmt = 0; fmt < AV_SAMPLE_FMT_NB; fmt++) {
+    enum AVSampleFormat sample_format = (enum AVSampleFormat)fmt;
+    const char *name = av_get_sample_fmt_name(sample_format);
+    int nb_bytes = av_get_bytes_per_sample(sample_format);
+
+    ERL_NIF_TERM desc =
+        enif_make_tuple2(env, enif_make_atom(env, name), enif_make_int(env, nb_bytes));
+
+    result = enif_make_list_cell(env, desc, result);
+  }
+
+  return result;
+}
+
 static int init_audio_converter(struct XavDecoder *xav_decoder) {
   xav_decoder->ac = audio_converter_alloc();
 
@@ -345,7 +380,9 @@ void free_xav_decoder(ErlNifEnv *env, void *obj) {
 
 static ErlNifFunc xav_funcs[] = {{"new", 6, new},
                                  {"decode", 4, decode, ERL_NIF_DIRTY_JOB_CPU_BOUND},
-                                 {"flush", 1, flush, ERL_NIF_DIRTY_JOB_CPU_BOUND}};
+                                 {"flush", 1, flush, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+                                 {"pixel_formats", 0, pixel_formats},
+                                 {"sample_formats", 0, sample_formats}};
 
 static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {
   xav_decoder_resource_type =
