@@ -21,4 +21,20 @@ defmodule Xav do
   """
   @spec sample_formats() :: [{atom(), integer()}]
   def sample_formats(), do: Xav.Decoder.NIF.sample_formats() |> Enum.reverse()
+
+  @doc """
+  List all decoders.
+  """
+  @spec list_decoders() :: [%{name: atom(), long_name: String.t(), type: atom()}]
+  def list_decoders() do
+    Xav.Decoder.NIF.list_decoders()
+    |> Enum.map(fn {name, long_name, media_type} ->
+      %{
+        name: name,
+        long_name: List.to_string(long_name),
+        type: media_type
+      }
+    end)
+    |> Enum.reverse()
+  end
 end

@@ -13,13 +13,9 @@ struct Decoder *decoder_alloc() {
   return decoder;
 }
 
-int decoder_init(struct Decoder *decoder, enum AVMediaType media_type, enum AVCodecID codec_id) {
-  decoder->media_type = media_type;
-  decoder->codec = avcodec_find_decoder(codec_id);
-
-  if (!decoder->codec) {
-    return -1;
-  }
+int decoder_init(struct Decoder *decoder, const AVCodec *codec) {
+  decoder->media_type = codec->type;
+  decoder->codec = codec;
 
   decoder->c = avcodec_alloc_context3(decoder->codec);
   if (!decoder->c) {

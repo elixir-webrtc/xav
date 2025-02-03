@@ -348,8 +348,8 @@ defmodule Xav.DecoderTest do
                Xav.Decoder.flush(decoder)
     end
 
-    test "h265 video" do
-      decoder = Xav.Decoder.new(:h265)
+    test "hevc video" do
+      decoder = Xav.Decoder.new(:hevc)
 
       assert :ok = Xav.Decoder.decode(decoder, @h265_frame)
 

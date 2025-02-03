@@ -19,4 +19,6 @@ defmodule Xav.Decoder.NIF do
   def pixel_formats(), do: :erlang.nif_error(:undef)
 
   def sample_formats(), do: :erlang.nif_error(:undef)
+
+  def list_decoders(), do: :erlang.nif_error(:undef)
 end
