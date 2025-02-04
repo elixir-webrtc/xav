@@ -18,7 +18,7 @@ defmodule Xav.Decoder do
       doc: """
       Output format of the samples.
 
-      If case of video, it's the pixel format. In case of audio, it's the sample format.
+      In case of video, it's the pixel format. In case of audio, it's the sample format.
 
       To get the list of supported pixel formats use `Xav.pixel_formats/0`,
       and for sample formats `Xav.sample_formats/0`.
@@ -45,6 +45,16 @@ defmodule Xav.Decoder do
       ```
       <<c10, c20, c30, c11, c21, c31, c12, c22, c32>>
       ```
+
+      An alternative would be to return a list of binaries, where
+      each binary represents different channel:
+      ```
+      [
+        <<c10, c11, c12, c13, c14>>,
+        <<c20, c21, c22, c23, c24>>,
+        <<c30, c31, c32, c33, c34>>
+      ]
+      ```
       """
     ],
     out_width: [
@@ -60,8 +70,7 @@ defmodule Xav.Decoder do
   @doc """
   Creates a new decoder.
 
-  `codec` is any decoders supported by FFmpeg. Note that only audio/video decoders
-  are supported for now.
+  `codec` is any audio/video decoder supported by `FFmpeg`.
 
   `opts` can be used to specify desired output parameters:\n#{NimbleOptions.docs(@decoder_options_schema)}
   """

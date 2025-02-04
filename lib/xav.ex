@@ -24,16 +24,17 @@ defmodule Xav do
 
   @doc """
   List all decoders.
+
+  The result is a list of 3-element tuples `{name, long_name, media_type}`:
+    * `name` - The short name of the decoder.
+    * `long_name` - The long name of the decoder.
+    * `media_type` - The media type of the decoder.
   """
-  @spec list_decoders() :: [%{name: atom(), long_name: String.t(), type: atom()}]
+  @spec list_decoders() :: [{name :: atom(), long_name :: String.t(), media_type :: atom()}]
   def list_decoders() do
     Xav.Decoder.NIF.list_decoders()
     |> Enum.map(fn {name, long_name, media_type} ->
-      %{
-        name: name,
-        long_name: List.to_string(long_name),
-        type: media_type
-      }
+      {name, List.to_string(long_name), media_type}
     end)
     |> Enum.reverse()
   end
