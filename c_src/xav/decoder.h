@@ -16,7 +16,7 @@ struct Decoder {
 
 struct Decoder *decoder_alloc();
 
-int decoder_init(struct Decoder *decoder, enum AVMediaType media_type, enum AVCodecID codec_id);
+int decoder_init(struct Decoder *decoder, const AVCodec *codec);
 
 int decoder_decode(struct Decoder *decoder, AVPacket *pkt, AVFrame *frame);
 

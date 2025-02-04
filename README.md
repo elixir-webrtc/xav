@@ -36,7 +36,7 @@ decoder = Xav.Decoder.new(:vp8, out_format: :rgb24)
 Decode with audio resampling
 
 ```elixir
-decoder = Xav.Decoder.new(:opus, out_format: :f32, out_sample_rate: 16_000)
+decoder = Xav.Decoder.new(:opus, out_format: :flt, out_sample_rate: 16_000)
 {:ok, %Xav.Frame{} = frame} = Xav.Decoder.decode(decoder, <<"somebinary">>)
 ```
 
@@ -74,7 +74,7 @@ serving =
 # Read a couple of frames.
 # See https://hexdocs.pm/bumblebee/Bumblebee.Audio.WhisperFeaturizer.html for default sampling rate.
 frames =
-    Xav.Reader.stream!("sample.mp3", read: :audio, out_format: :f32, out_channels: 1, out_sample_rate: 16_000)
+    Xav.Reader.stream!("sample.mp3", read: :audio, out_format: :flt, out_channels: 1, out_sample_rate: 16_000)
     |> Stream.take(200)
     |> Enum.map(fn frame -> Xav.Frame.to_nx(frame) end)
 
