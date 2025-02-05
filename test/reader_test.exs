@@ -126,7 +126,7 @@ defmodule Xav.ReaderTest do
       Xav.Reader.stream!(path,
         read: :audio,
         out_channels: 1,
-        out_format: :f32,
+        out_format: :flt,
         out_sample_rate: 16_000
       )
       |> Enum.map(&Xav.Frame.to_nx(&1))
