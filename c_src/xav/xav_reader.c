@@ -228,22 +228,13 @@ static int init_audio_converter(struct XavReader *xav_reader) {
   }
 
   enum AVSampleFormat out_sample_fmt;
-  if (strcmp(xav_reader->out_format, "u8") == 0) {
-    out_sample_fmt = AV_SAMPLE_FMT_U8;
-  } else if (strcmp(xav_reader->out_format, "s16") == 0) {
-    out_sample_fmt = AV_SAMPLE_FMT_S16;
-  } else if (strcmp(xav_reader->out_format, "s32") == 0) {
-    out_sample_fmt = AV_SAMPLE_FMT_S32;
-  } else if (strcmp(xav_reader->out_format, "s64") == 0) {
-    out_sample_fmt = AV_SAMPLE_FMT_S64;
-  } else if (strcmp(xav_reader->out_format, "f32") == 0) {
-    out_sample_fmt = AV_SAMPLE_FMT_FLT;
-  } else if (strcmp(xav_reader->out_format, "f64") == 0) {
-    out_sample_fmt = AV_SAMPLE_FMT_DBL;
-  } else if (strcmp(xav_reader->out_format, "nil") == 0) {
+  if (strcmp(xav_reader->out_format, "nil") == 0) {
     out_sample_fmt = av_get_alt_sample_fmt(xav_reader->reader->c->sample_fmt, 0);
   } else {
-    return -1;
+    out_sample_fmt = av_get_sample_fmt(xav_reader->out_format);
+    if (out_sample_fmt == AV_SAMPLE_FMT_NONE) {
+      return -1;
+    }
   }
 
   struct ChannelLayout in_chlayout, out_chlayout;

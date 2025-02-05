@@ -307,7 +307,7 @@ defmodule Xav.DecoderTest do
     test "audio" do
       decoder = Xav.Decoder.new(:opus)
 
-      assert {:ok, %Xav.Frame{data: data, samples: 960, pts: 0, format: :f32}} =
+      assert {:ok, %Xav.Frame{data: data, samples: 960, pts: 0, format: :flt}} =
                Xav.Decoder.decode(decoder, @opus_frame)
 
       assert byte_size(data) == 7680
