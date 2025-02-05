@@ -5,17 +5,15 @@ defmodule Xav.Frame do
 
   @typedoc """
   Possible audio samples formats.
+
+  To get the complete list of sample formats, check `Xav.sample_formats/0`.
   """
-  @type audio_format() :: :u8 | :s16 | :s32 | :s64 | :f32 | :f64
+  @type audio_format() :: atom()
 
   @typedoc """
   Possible video frame formats.
 
-  The list of accepted formats are all `ffmpeg` pixel formats. For a complete list run:
-
-  ```sh
-  ffmpeg -pix_fmts
-  ```
+  To get the complete list of pixel formats, check `Xav.pixel_formats/0`.
 
   An example of a pixel format is `:rgb24`.
   """
@@ -77,16 +75,31 @@ defmodule Xav.Frame do
     Converts a frame to an Nx tensor.
 
     In case of a video frame, dimension names of the newly created tensor are `[:height, :width, :channels]`.
+
+    For video frames, the only supported pixel formats are:
+      * `:rgb24`
+      * `:bgr24`
     """
     @spec to_nx(t()) :: Nx.Tensor.t()
-    def to_nx(%__MODULE__{type: :video} = frame) do
+    def to_nx(%__MODULE__{type: :video, format: format} = frame)
+        when format in [:rgb24, :bgr24] do
       frame.data
       |> Nx.from_binary(:u8)
       |> Nx.reshape({frame.height, frame.width, 3}, names: [:height, :width, :channels])
     end
 
     def to_nx(%__MODULE__{type: :audio} = frame) do
-      Nx.from_binary(frame.data, frame.format)
+      Nx.from_binary(frame.data, normalize_format(frame.format))
     end
+
+    defp normalize_format(:flt), do: :f32
+    defp normalize_format(:fltp), do: :f32
+    defp normalize_format(:dbl), do: :f64
+    defp normalize_format(:dblp), do: :f64
+    defp normalize_format(:u8p), do: :u8
+    defp normalize_format(:s16p), do: :s16
+    defp normalize_format(:s32p), do: :s32
+    defp normalize_format(:s64p), do: :s64
+    defp normalize_format(format), do: format
   end
 end
