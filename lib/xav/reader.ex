@@ -3,8 +3,6 @@ defmodule Xav.Reader do
   Audio/video file reader.
   """
 
-  @audio_out_formats [:u8, :s16, :s32, :s64, :f32, :f64]
-
   @reader_options_schema [
     read: [
       type: {:in, [:audio, :video]},
@@ -17,10 +15,10 @@ defmodule Xav.Reader do
       doc: "Whether the path points to the camera"
     ],
     out_format: [
-      type: {:in, @audio_out_formats},
+      type: :atom,
       doc: """
-      The output format of the audio samples. It should be one of
-      the following values: `#{Enum.join(@audio_out_formats, ", ")}`.
+      The output format of the audio samples. For a list of available
+      sample formats check `Xav.sample_formats/0`.
 
       For video samples, it is always `:rgb24`.
       """
