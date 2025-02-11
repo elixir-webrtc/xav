@@ -16,10 +16,7 @@ struct Encoder *encoder_alloc() {
 }
 
 int encoder_init(struct Encoder *encoder, struct EncoderConfig *config) {
-  encoder->codec = avcodec_find_encoder(config->codec);
-  if (!encoder->codec) {
-    return -1;
-  }
+  encoder->codec = config->codec;
 
   encoder->c = avcodec_alloc_context3(encoder->codec);
   if (!encoder->c) {
@@ -44,7 +41,7 @@ int encoder_init(struct Encoder *encoder, struct EncoderConfig *config) {
   }
 
   AVDictionary *opts = NULL;
-  if (config->codec == AV_CODEC_ID_HEVC) {
+  if (strcmp(encoder->codec->name, "libx265") == 0) {
     char x265_params[256] = "log-level=warning";
     if (config->gop_size > 0) {
       sprintf(x265_params + strlen(x265_params), ":keyint=%d", config->gop_size);

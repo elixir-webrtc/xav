@@ -303,10 +303,13 @@ ERL_NIF_TERM list_decoders(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) 
   while ((codec = av_codec_iterate(&iter))) {
     if (av_codec_is_decoder(codec)) {
       ERL_NIF_TERM name = enif_make_atom(env, codec->name);
-      ERL_NIF_TERM long_name = enif_make_string(env, codec->long_name, ERL_NIF_LATIN1);
+      ERL_NIF_TERM codec_name = enif_make_atom(env, avcodec_get_name(codec->id));
+      ERL_NIF_TERM long_name = codec->long_name
+                                   ? enif_make_string(env, codec->long_name, ERL_NIF_LATIN1)
+                                   : enif_make_string(env, "", ERL_NIF_LATIN1);
       ERL_NIF_TERM media_type = enif_make_atom(env, av_get_media_type_string(codec->type));
 
-      ERL_NIF_TERM desc = enif_make_tuple3(env, name, long_name, media_type);
+      ERL_NIF_TERM desc = enif_make_tuple4(env, codec_name, name, long_name, media_type);
       result = enif_make_list_cell(env, desc, result);
     }
   }

@@ -35,6 +35,20 @@ int xav_nif_get_atom(ErlNifEnv *env, ERL_NIF_TERM term, char **value) {
   return 1;
 }
 
+int xav_nif_get_string(ErlNifEnv *env, ERL_NIF_TERM term, char **value) {
+  ErlNifBinary bin;
+  if (!enif_inspect_binary(env, term, &bin)) {
+    return 0;
+  }
+
+  char *str_value = (char *)XAV_ALLOC((bin.size + 1) * sizeof(char *));
+  memcpy(str_value, bin.data, bin.size);
+  str_value[bin.size] = '\0';
+
+  *value = str_value;
+  return 1;
+}
+
 ERL_NIF_TERM xav_nif_audio_frame_to_term(ErlNifEnv *env, uint8_t **out_data, int out_samples,
                                          int out_size, enum AVSampleFormat out_format, int pts) {
   ERL_NIF_TERM data_term;

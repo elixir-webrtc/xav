@@ -2,17 +2,13 @@ defmodule Xav.Encoder do
   @moduledoc """
   Audio/Video encoder.
 
-  Currently, it only supports video encoding:
-    * `h264`
-    * `h265`/`hevc`
+  Currently, it only supports video encoding.
   """
 
   @type t :: reference()
 
-  @type codec :: :h264 | :h265 | :hevc
+  @type codec :: atom()
   @type encoder_options :: Keyword.t()
-
-  @video_codecs [:h264, :h265, :hevc]
 
   @video_encoder_schema [
     width: [
@@ -63,21 +59,14 @@ defmodule Xav.Encoder do
       """
     ],
     profile: [
-      type:
-        {:in, [:constrained_baseline, :baseline, :main, :high, :main_10, :main_still_picture]},
-      type_doc: "`t:atom/0`",
+      type: :string,
       doc: """
       The encoder's profile.
 
       A profile defines the capabilities and features an encoder can use to
       target specific applications (e.g. `live video`)
 
-      The following profiles are defined:
-
-      | Codec | Profiles |
-      |-------|----------|
-      | h264  | constrained_baseline, baseline, main, high |
-      | h265/hevc  | main, main_10, main_still_picture |
+      To get the list of available profiles for an encoder, see `Xav.list_encoders/0`
       """
     ]
   ]
@@ -85,10 +74,14 @@ defmodule Xav.Encoder do
   @doc """
   Create a new encoder.
 
+  To get the list of available encoders, see `Xav.list_encoders/0`.
+
   It accepts the following options:\n#{NimbleOptions.docs(@video_encoder_schema)}
   """
   @spec new(codec(), Keyword.t()) :: t()
-  def new(codec, opts) when codec in @video_codecs do
+  def new(codec, opts) do
+    {codec, codec_id} = validate_codec!(codec)
+
     opts = NimbleOptions.validate!(opts, @video_encoder_schema)
     {time_base_num, time_base_den} = opts[:time_base]
 
@@ -98,7 +91,11 @@ defmodule Xav.Encoder do
       |> Map.delete(:time_base)
       |> Map.merge(%{time_base_num: time_base_num, time_base_den: time_base_den})
 
-    Xav.Encoder.NIF.new(codec, nif_options)
+    if codec_id do
+      Xav.Encoder.NIF.new(nil, Map.put(nif_options, :codec_id, codec_id))
+    else
+      Xav.Encoder.NIF.new(codec, nif_options)
+    end
   end
 
   @doc """
@@ -128,5 +125,21 @@ defmodule Xav.Encoder do
     Enum.map(result, fn {data, dts, pts, keyframe?} ->
       %Xav.Packet{data: data, dts: dts, pts: pts, keyframe?: keyframe?}
     end)
+  end
+
+  defp validate_codec!(codec) do
+    Xav.Encoder.NIF.list_encoders()
+    |> Enum.find_value(fn {codec_family, encoder_name, _, media_type, codec_id, _profiles} ->
+      cond do
+        media_type != :video -> nil
+        encoder_name == codec -> {encoder_name, nil}
+        codec_family == codec -> {codec, codec_id}
+        true -> nil
+      end
+    end)
+    |> case do
+      nil -> raise ArgumentError, "Unknown codec: #{inspect(codec)}"
+      result -> result
+    end
   end
 end

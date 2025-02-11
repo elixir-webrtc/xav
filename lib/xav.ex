@@ -1,6 +1,21 @@
 defmodule Xav do
   @moduledoc File.read!("README.md")
 
+  @type encoder :: %{
+          codec: atom(),
+          name: atom(),
+          long_name: String.t(),
+          media_type: atom(),
+          profiles: [String.t()]
+        }
+
+  @type decoder :: %{
+          codec: atom(),
+          name: atom(),
+          long_name: String.t(),
+          media_type: atom()
+        }
+
   @doc """
   Get all available pixel formats.
 
@@ -24,17 +39,35 @@ defmodule Xav do
 
   @doc """
   List all decoders.
-
-  The result is a list of 3-element tuples `{name, long_name, media_type}`:
-    * `name` - The short name of the decoder.
-    * `long_name` - The long name of the decoder.
-    * `media_type` - The media type of the decoder.
   """
-  @spec list_decoders() :: [{name :: atom(), long_name :: String.t(), media_type :: atom()}]
+  @spec list_decoders() :: [decoder()]
   def list_decoders() do
     Xav.Decoder.NIF.list_decoders()
-    |> Enum.map(fn {name, long_name, media_type} ->
-      {name, List.to_string(long_name), media_type}
+    |> Enum.map(fn {codec, name, long_name, media_type} ->
+      %{
+        codec: codec,
+        name: name,
+        long_name: List.to_string(long_name),
+        media_type: media_type
+      }
+    end)
+    |> Enum.reverse()
+  end
+
+  @doc """
+  List all encoders.
+  """
+  @spec list_encoders() :: [encoder()]
+  def list_encoders() do
+    Xav.Encoder.NIF.list_encoders()
+    |> Enum.map(fn {family_name, name, long_name, media_type, _codec_id, profiles} ->
+      %{
+        codec: family_name,
+        name: name,
+        long_name: List.to_string(long_name),
+        media_type: media_type,
+        profiles: profiles |> Enum.map(&List.to_string/1) |> Enum.reverse()
+      }
     end)
     |> Enum.reverse()
   end

@@ -13,4 +13,6 @@ defmodule Xav.Encoder.NIF do
   def encode(_encoder, _data, _pts), do: :erlang.nif_error(:undef)
 
   def flush(_encoder), do: :erlang.nif_error(:undef)
+
+  def list_encoders(), do: :erlang.nif_error(:undef)
 end
