@@ -17,7 +17,7 @@ defmodule Xav.EncoderTest do
     end
 
     test "raises on invalid encoder" do
-      assert_raise FunctionClauseError, fn -> Xav.Encoder.new(:h263, []) end
+      assert_raise ArgumentError, fn -> Xav.Encoder.new(:h264_none, []) end
     end
 
     test "raises on invalid options" do
@@ -109,7 +109,7 @@ defmodule Xav.EncoderTest do
         |> Enum.to_list()
 
       assert length(packets) == 20
-      Enum.all?(packets, &(&1.dts == &1.pts))
+      assert Enum.all?(packets, &(&1.dts == &1.pts)), "dts should be equal to pts"
     end
   end
 end

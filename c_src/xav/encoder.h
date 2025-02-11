@@ -11,7 +11,7 @@ struct Encoder {
 
 struct EncoderConfig {
   enum AVMediaType media_type;
-  enum AVCodecID codec;
+  const AVCodec *codec;
   int width;
   int height;
   enum AVPixelFormat format;

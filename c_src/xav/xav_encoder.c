@@ -4,6 +4,7 @@ ErlNifResourceType *xav_encoder_resource_type;
 
 static ERL_NIF_TERM packets_to_term(ErlNifEnv *, struct Encoder *);
 static int get_profile(enum AVCodecID, const char *);
+static ERL_NIF_TERM get_codec_profiles(ErlNifEnv *, const AVCodec *);
 
 ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   if (argc != 2) {
@@ -15,30 +16,20 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   encoder_config.max_b_frames = -1;
   encoder_config.profile = FF_PROFILE_UNKNOWN;
 
-  char *codec = NULL, *format = NULL, *profile = NULL;
+  char *codec_name = NULL, *format = NULL, *profile = NULL;
+  int codec_id = 0;
 
   ErlNifMapIterator iter;
   ERL_NIF_TERM key, value;
   char *config_name = NULL;
   int err;
 
-  if (!xav_nif_get_atom(env, argv[0], &codec)) {
+  if (!xav_nif_get_atom(env, argv[0], &codec_name)) {
     return xav_nif_raise(env, "failed_to_get_atom");
   }
 
   if (!enif_is_map(env, argv[1])) {
     return xav_nif_raise(env, "failed_to_get_map");
-  }
-
-  if (strcmp(codec, "h264") == 0) {
-    encoder_config.media_type = AVMEDIA_TYPE_VIDEO;
-    encoder_config.codec = AV_CODEC_ID_H264;
-  } else if (strcmp(codec, "h265") == 0 || strcmp(codec, "hevc") == 0) {
-    encoder_config.media_type = AVMEDIA_TYPE_VIDEO;
-    encoder_config.codec = AV_CODEC_ID_HEVC;
-  } else {
-    ret = xav_nif_raise(env, "failed_to_resolve_codec");
-    goto clean;
   }
 
   enif_map_iterator_create(env, argv[1], &iter, ERL_NIF_MAP_ITERATOR_FIRST);
@@ -64,7 +55,9 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     } else if (strcmp(config_name, "max_b_frames") == 0) {
       err = enif_get_int(env, value, &encoder_config.max_b_frames);
     } else if (strcmp(config_name, "profile") == 0) {
-      err = xav_nif_get_atom(env, value, &profile);
+      err = xav_nif_get_string(env, value, &profile);
+    } else if (strcmp(config_name, "codec_id") == 0) {
+      err = enif_get_int(env, value, &codec_id);
     } else {
       ret = xav_nif_raise(env, "unknown_config_key");
       goto clean;
@@ -79,6 +72,17 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     enif_map_iterator_next(env, &iter);
   }
 
+  if (strcmp(codec_name, "nil") == 0) {
+    encoder_config.codec = avcodec_find_encoder((enum AVCodecID)codec_id);
+  } else {
+    encoder_config.codec = avcodec_find_encoder_by_name(codec_name);
+  }
+
+  if (!encoder_config.codec) {
+    ret = xav_nif_raise(env, "unknown_codec");
+    goto clean;
+  }
+
   encoder_config.format = av_get_pix_fmt(format);
   if (encoder_config.format == AV_PIX_FMT_NONE) {
     ret = xav_nif_raise(env, "unknown_format");
@@ -86,7 +90,7 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   }
 
   if (profile) {
-    encoder_config.profile = get_profile(encoder_config.codec, profile);
+    encoder_config.profile = get_profile(encoder_config.codec->id, profile);
     if (encoder_config.profile == FF_PROFILE_UNKNOWN) {
       ret = xav_nif_raise(env, "invalid_profile");
       goto clean;
@@ -107,8 +111,8 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   enif_release_resource(xav_encoder);
 
 clean:
-  if (!codec)
-    XAV_FREE(codec);
+  if (!codec_name)
+    XAV_FREE(codec_name);
   if (!format)
     XAV_FREE(format);
   if (!config_name)
@@ -178,6 +182,32 @@ ERL_NIF_TERM flush(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   return packets_to_term(env, xav_encoder->encoder);
 }
 
+ERL_NIF_TERM list_encoders(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  ERL_NIF_TERM result = enif_make_list(env, 0);
+
+  const AVCodec *codec = NULL;
+  void *iter = NULL;
+
+  while ((codec = av_codec_iterate(&iter))) {
+    if (av_codec_is_encoder(codec)) {
+      ERL_NIF_TERM name = enif_make_atom(env, codec->name);
+      ERL_NIF_TERM codec_name = enif_make_atom(env, avcodec_get_name(codec->id));
+      ERL_NIF_TERM long_name = codec->long_name
+                                   ? enif_make_string(env, codec->long_name, ERL_NIF_LATIN1)
+                                   : enif_make_string(env, "", ERL_NIF_LATIN1);
+      ERL_NIF_TERM media_type = enif_make_atom(env, av_get_media_type_string(codec->type));
+      ERL_NIF_TERM codec_id = enif_make_int64(env, codec->id);
+      ERL_NIF_TERM profiles = get_codec_profiles(env, codec);
+
+      ERL_NIF_TERM desc =
+          enif_make_tuple6(env, codec_name, name, long_name, media_type, codec_id, profiles);
+      result = enif_make_list_cell(env, desc, result);
+    }
+  }
+
+  return result;
+}
+
 void free_xav_encoder(ErlNifEnv *env, void *obj) {
   XAV_LOG_DEBUG("Freeing XavEncoder object");
   struct XavEncoder *xav_encoder = (struct XavEncoder *)obj;
@@ -208,32 +238,48 @@ static ERL_NIF_TERM packets_to_term(ErlNifEnv *env, struct Encoder *encoder) {
 }
 
 static int get_profile(enum AVCodecID codec, const char *profile_name) {
-  if (codec == AV_CODEC_ID_H264) {
-    if (strcmp(profile_name, "constrained_baseline") == 0) {
-      return FF_PROFILE_H264_CONSTRAINED_BASELINE;
-    } else if (strcmp(profile_name, "baseline") == 0) {
-      return FF_PROFILE_H264_BASELINE;
-    } else if (strcmp(profile_name, "main") == 0) {
-      return FF_PROFILE_H264_MAIN;
-    } else if (strcmp(profile_name, "high") == 0) {
-      return FF_PROFILE_H264_HIGH;
-    }
+  const AVCodecDescriptor *desc = avcodec_descriptor_get(codec);
+  const AVProfile *profile = desc->profiles;
+
+  if (profile == NULL) {
+    return FF_PROFILE_UNKNOWN;
   }
 
-  if (codec == AV_CODEC_ID_HEVC) {
-    if (strcmp(profile_name, "main") == 0) {
-      return FF_PROFILE_HEVC_MAIN;
-    } else if (strcmp(profile_name, "main_10") == 0) {
-      return FF_PROFILE_HEVC_MAIN_10;
-    } else if (strcmp(profile_name, "main_still_picture") == 0) {
-      return FF_PROFILE_HEVC_MAIN_STILL_PICTURE;
+  while (profile->profile != FF_PROFILE_UNKNOWN) {
+    if (strcmp(profile->name, profile_name) == 0) {
+      break;
     }
+
+    profile++;
   }
 
-  return FF_PROFILE_UNKNOWN;
+  return profile->profile;
 }
 
-static ErlNifFunc xav_funcs[] = {{"new", 2, new}, {"encode", 3, encode}, {"flush", 1, flush}};
+static ERL_NIF_TERM get_codec_profiles(ErlNifEnv *env, const AVCodec *codec) {
+  ERL_NIF_TERM result = enif_make_list(env, 0);
+
+  const AVCodecDescriptor *desc = avcodec_descriptor_get(codec->id);
+  const AVProfile *profile = desc->profiles;
+
+  if (profile == NULL) {
+    return result;
+  }
+
+  while (profile->profile != FF_PROFILE_UNKNOWN) {
+    ERL_NIF_TERM profile_name = enif_make_string(env, profile->name, ERL_NIF_LATIN1);
+    result = enif_make_list_cell(env, profile_name, result);
+
+    profile++;
+  }
+
+  return result;
+}
+
+static ErlNifFunc xav_funcs[] = {{"new", 2, new},
+                                 {"encode", 3, encode},
+                                 {"flush", 1, flush},
+                                 {"list_encoders", 0, list_encoders}};
 
 static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {
   xav_encoder_resource_type =
