@@ -71,6 +71,40 @@ defmodule Xav.Encoder do
     ]
   ]
 
+  @audio_encoder_schema [
+    format: [
+      type: :atom,
+      required: true,
+      doc: "Sample format of the audio samples."
+    ],
+    sample_rate: [
+      type: :pos_integer,
+      default: 44100,
+      doc: """
+      Number of samples per second.
+
+      To get the list of supported sample rates for an encoder, see `Xav.list_encoders/0`
+      """
+    ],
+    profile: [
+      type: :string,
+      doc: """
+      The encoder's profile.
+
+      To get the list of available profiles for an encoder, see `Xav.list_encoders/0`
+      """
+    ],
+    channel_layout: [
+      type: :string,
+      required: true,
+      doc: """
+      Channel layout of the audio samples.
+
+      For possible values, check [this](https://ffmpeg.org/ffmpeg-utils.html#Channel-Layout).
+      """
+    ]
+  ]
+
   @doc """
   Create a new encoder.
 
@@ -80,16 +114,24 @@ defmodule Xav.Encoder do
   """
   @spec new(codec(), Keyword.t()) :: t()
   def new(codec, opts) do
-    {codec, codec_id} = validate_codec!(codec)
-
-    opts = NimbleOptions.validate!(opts, @video_encoder_schema)
-    {time_base_num, time_base_den} = opts[:time_base]
+    {codec, codec_id, media_type} = validate_codec!(codec)
 
     nif_options =
-      opts
-      |> Map.new()
-      |> Map.delete(:time_base)
-      |> Map.merge(%{time_base_num: time_base_num, time_base_den: time_base_den})
+      case media_type do
+        :video ->
+          opts = NimbleOptions.validate!(opts, @video_encoder_schema)
+          {time_base_num, time_base_den} = opts[:time_base]
+
+          opts
+          |> Map.new()
+          |> Map.delete(:time_base)
+          |> Map.merge(%{time_base_num: time_base_num, time_base_den: time_base_den})
+
+        :audio ->
+          opts
+          |> NimbleOptions.validate!(@audio_encoder_schema)
+          |> Map.new()
+      end
 
     if codec_id do
       Xav.Encoder.NIF.new(nil, Map.put(nif_options, :codec_id, codec_id))
@@ -129,11 +171,12 @@ defmodule Xav.Encoder do
 
   defp validate_codec!(codec) do
     Xav.Encoder.NIF.list_encoders()
-    |> Enum.find_value(fn {codec_family, encoder_name, _, media_type, codec_id, _profiles} ->
+    |> Enum.find_value(fn {codec_family, encoder_name, _, media_type, codec_id, _profiles,
+                           _sample_formats, _sample_rates} ->
       cond do
-        media_type != :video -> nil
-        encoder_name == codec -> {encoder_name, nil}
-        codec_family == codec -> {codec, codec_id}
+        media_type not in [:video, :audio] -> nil
+        encoder_name == codec -> {encoder_name, nil, media_type}
+        codec_family == codec -> {codec, codec_id, media_type}
         true -> nil
       end
     end)

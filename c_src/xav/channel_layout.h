@@ -9,4 +9,6 @@ struct ChannelLayout {
   uint64_t layout;
 #endif
 };
+
+int xav_get_channel_layout(const char *name, struct ChannelLayout *layout);
 #endif

@@ -4,7 +4,11 @@ ErlNifResourceType *xav_encoder_resource_type;
 
 static ERL_NIF_TERM packets_to_term(ErlNifEnv *, struct Encoder *);
 static int get_profile(enum AVCodecID, const char *);
-static ERL_NIF_TERM get_codec_profiles(ErlNifEnv *, const AVCodec *);
+static ERL_NIF_TERM codec_get_profiles(ErlNifEnv *, const AVCodec *);
+static ERL_NIF_TERM codec_get_sample_formats(ErlNifEnv *, const AVCodec *);
+static ERL_NIF_TERM codec_get_sample_formats(ErlNifEnv *, const AVCodec *);
+static ERL_NIF_TERM codec_get_sample_rates(ErlNifEnv *, const AVCodec *);
+static ERL_NIF_TERM codec_get_channel_layouts(ErlNifEnv *, const AVCodec *);
 
 ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   if (argc != 2) {
@@ -17,6 +21,7 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   encoder_config.profile = FF_PROFILE_UNKNOWN;
 
   char *codec_name = NULL, *format = NULL, *profile = NULL;
+  char *channel_layout = NULL;
   int codec_id = 0;
 
   ErlNifMapIterator iter;
@@ -58,6 +63,10 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
       err = xav_nif_get_string(env, value, &profile);
     } else if (strcmp(config_name, "codec_id") == 0) {
       err = enif_get_int(env, value, &codec_id);
+    } else if (strcmp(config_name, "sample_rate") == 0) {
+      err = enif_get_int(env, value, &encoder_config.sample_rate);
+    } else if (strcmp(config_name, "channel_layout") == 0) {
+      err = xav_nif_get_string(env, value, &channel_layout);
     } else {
       ret = xav_nif_raise(env, "unknown_config_key");
       goto clean;
@@ -83,10 +92,23 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     goto clean;
   }
 
-  encoder_config.format = av_get_pix_fmt(format);
-  if (encoder_config.format == AV_PIX_FMT_NONE) {
-    ret = xav_nif_raise(env, "unknown_format");
-    goto clean;
+  if (encoder_config.codec->type == AVMEDIA_TYPE_VIDEO) {
+    encoder_config.format = av_get_pix_fmt(format);
+    if (encoder_config.format == AV_PIX_FMT_NONE) {
+      ret = xav_nif_raise(env, "unknown_format");
+      goto clean;
+    }
+  } else {
+    encoder_config.sample_format = av_get_sample_fmt(format);
+    if (encoder_config.sample_format == AV_SAMPLE_FMT_NONE) {
+      ret = xav_nif_raise(env, "unknown_format");
+      goto clean;
+    }
+
+    if (!xav_get_channel_layout(channel_layout, &encoder_config.channel_layout)) {
+      ret = xav_nif_raise(env, "unknown_channel_layout");
+      goto clean;
+    }
   }
 
   if (profile) {
@@ -100,11 +122,22 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   struct XavEncoder *xav_encoder =
       enif_alloc_resource(xav_encoder_resource_type, sizeof(struct XavEncoder));
 
-  xav_encoder->frame = av_frame_alloc();
   xav_encoder->encoder = encoder_alloc();
   if (encoder_init(xav_encoder->encoder, &encoder_config) < 0) {
     ret = xav_nif_raise(env, "failed_to_init_encoder");
     goto clean;
+  }
+
+  xav_encoder->frame = av_frame_alloc();
+
+  if (encoder_config.codec->type == AVMEDIA_TYPE_AUDIO) {
+    xav_encoder->frame->format = encoder_config.format;
+    xav_encoder->frame->nb_samples = xav_encoder->encoder->c->frame_size;
+    xav_encoder->frame->channel_layout = xav_encoder->encoder->c->channel_layout;
+    if (av_frame_get_buffer(xav_encoder->frame, 0) < 0) {
+      ret = xav_nif_raise(env, "failed_to_get_buffer");
+      goto clean;
+    }
   }
 
   ret = enif_make_resource(env, xav_encoder);
@@ -119,12 +152,16 @@ clean:
     XAV_FREE(config_name);
   if (!profile)
     XAV_FREE(profile);
+  if (!channel_layout)
+    XAV_FREE(channel_layout);
   enif_map_iterator_destroy(env, &iter);
 
   return ret;
 }
 
 ERL_NIF_TERM encode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  int ret;
+
   if (argc != 3) {
     return xav_nif_raise(env, "invalid_arg_count");
   }
@@ -145,15 +182,25 @@ ERL_NIF_TERM encode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   }
 
   AVFrame *frame = xav_encoder->frame;
-  frame->width = xav_encoder->encoder->c->width;
-  frame->height = xav_encoder->encoder->c->height;
-  frame->format = xav_encoder->encoder->c->pix_fmt;
-  frame->pts = pts;
+  if (xav_encoder->encoder->codec->type == AVMEDIA_TYPE_VIDEO) {
+    frame->width = xav_encoder->encoder->c->width;
+    frame->height = xav_encoder->encoder->c->height;
+    frame->format = xav_encoder->encoder->c->pix_fmt;
+    frame->pts = pts;
 
-  int ret = av_image_fill_arrays(frame->data, frame->linesize, input.data, frame->format,
-                                 frame->width, frame->height, 1);
-  if (ret < 0) {
-    return xav_nif_raise(env, "failed_to_fill_arrays");
+    ret = av_image_fill_arrays(frame->data, frame->linesize, input.data, frame->format,
+                               frame->width, frame->height, 1);
+    if (ret < 0) {
+      return xav_nif_raise(env, "failed_to_fill_arrays");
+    }
+  } else {
+    frame->pts = pts;
+    ret = av_samples_fill_arrays(frame->data, frame->linesize, input.data, frame->channels,
+                                 frame->nb_samples, xav_encoder->encoder->c->sample_fmt, 1);
+
+    if (ret < 0) {
+      return xav_nif_raise(env, "failed_to_fill_arrays");
+    }
   }
 
   ret = encoder_encode(xav_encoder->encoder, frame);
@@ -197,10 +244,12 @@ ERL_NIF_TERM list_encoders(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) 
                                    : enif_make_string(env, "", ERL_NIF_LATIN1);
       ERL_NIF_TERM media_type = enif_make_atom(env, av_get_media_type_string(codec->type));
       ERL_NIF_TERM codec_id = enif_make_int64(env, codec->id);
-      ERL_NIF_TERM profiles = get_codec_profiles(env, codec);
+      ERL_NIF_TERM profiles = codec_get_profiles(env, codec);
+      ERL_NIF_TERM sample_formats = codec_get_sample_formats(env, codec);
+      ERL_NIF_TERM sample_rates = codec_get_sample_rates(env, codec);
 
-      ERL_NIF_TERM desc =
-          enif_make_tuple6(env, codec_name, name, long_name, media_type, codec_id, profiles);
+      ERL_NIF_TERM desc = enif_make_tuple8(env, codec_name, name, long_name, media_type, codec_id,
+                                           profiles, sample_formats, sample_rates);
       result = enif_make_list_cell(env, desc, result);
     }
   }
@@ -256,7 +305,7 @@ static int get_profile(enum AVCodecID codec, const char *profile_name) {
   return profile->profile;
 }
 
-static ERL_NIF_TERM get_codec_profiles(ErlNifEnv *env, const AVCodec *codec) {
+static ERL_NIF_TERM codec_get_profiles(ErlNifEnv *env, const AVCodec *codec) {
   ERL_NIF_TERM result = enif_make_list(env, 0);
 
   const AVCodecDescriptor *desc = avcodec_descriptor_get(codec->id);
@@ -271,6 +320,41 @@ static ERL_NIF_TERM get_codec_profiles(ErlNifEnv *env, const AVCodec *codec) {
     result = enif_make_list_cell(env, profile_name, result);
 
     profile++;
+  }
+
+  return result;
+}
+
+static ERL_NIF_TERM codec_get_sample_formats(ErlNifEnv *env, const AVCodec *codec) {
+  ERL_NIF_TERM result = enif_make_list(env, 0);
+
+  if (codec->type != AVMEDIA_TYPE_AUDIO) {
+    return result;
+  }
+
+  const enum AVSampleFormat *sample_format = codec->sample_fmts;
+  while (*sample_format != AV_SAMPLE_FMT_NONE) {
+    ERL_NIF_TERM format_name = enif_make_atom(env, av_get_sample_fmt_name(*sample_format));
+    result = enif_make_list_cell(env, format_name, result);
+
+    sample_format++;
+  }
+
+  return result;
+}
+
+static ERL_NIF_TERM codec_get_sample_rates(ErlNifEnv *env, const AVCodec *codec) {
+  ERL_NIF_TERM result = enif_make_list(env, 0);
+
+  if (codec->type != AVMEDIA_TYPE_AUDIO || codec->supported_samplerates == NULL) {
+    return result;
+  }
+
+  const int *sample_rate = codec->supported_samplerates;
+
+  while (*sample_rate != 0) {
+    result = enif_make_list_cell(env, enif_make_int(env, *sample_rate), result);
+    sample_rate++;
   }
 
   return result;

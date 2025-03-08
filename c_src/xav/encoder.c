@@ -23,21 +23,27 @@ int encoder_init(struct Encoder *encoder, struct EncoderConfig *config) {
     return -1;
   }
 
-  encoder->c->width = config->width;
-  encoder->c->height = config->height;
-  encoder->c->pix_fmt = config->format;
-  encoder->c->time_base = config->time_base;
+  if (encoder->codec->type == AVMEDIA_TYPE_VIDEO) {
+    encoder->c->width = config->width;
+    encoder->c->height = config->height;
+    encoder->c->pix_fmt = config->format;
+    encoder->c->time_base = config->time_base;
+
+    if (config->gop_size > 0) {
+      encoder->c->gop_size = config->gop_size;
+    }
+
+    if (config->max_b_frames >= 0) {
+      encoder->c->max_b_frames = config->max_b_frames;
+    }
+  } else {
+    encoder->c->sample_fmt = config->sample_format;
+    encoder->c->sample_rate = config->sample_rate;
+    encoder->c->channel_layout = config->channel_layout.layout;
+  }
 
   if (config->profile != FF_PROFILE_UNKNOWN) {
     encoder->c->profile = config->profile;
-  }
-
-  if (config->gop_size > 0) {
-    encoder->c->gop_size = config->gop_size;
-  }
-
-  if (config->max_b_frames >= 0) {
-    encoder->c->max_b_frames = config->max_b_frames;
   }
 
   AVDictionary *opts = NULL;

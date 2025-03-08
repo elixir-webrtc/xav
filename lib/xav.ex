@@ -6,7 +6,8 @@ defmodule Xav do
           name: atom(),
           long_name: String.t(),
           media_type: atom(),
-          profiles: [String.t()]
+          profiles: [String.t()],
+          sample_formats: [atom()]
         }
 
   @type decoder :: %{
@@ -60,13 +61,16 @@ defmodule Xav do
   @spec list_encoders() :: [encoder()]
   def list_encoders() do
     Xav.Encoder.NIF.list_encoders()
-    |> Enum.map(fn {family_name, name, long_name, media_type, _codec_id, profiles} ->
+    |> Enum.map(fn {family_name, name, long_name, media_type, _codec_id, profiles, sample_formats,
+                    sample_rates} ->
       %{
         codec: family_name,
         name: name,
         long_name: List.to_string(long_name),
         media_type: media_type,
-        profiles: profiles |> Enum.map(&List.to_string/1) |> Enum.reverse()
+        profiles: profiles |> Enum.map(&List.to_string/1) |> Enum.reverse(),
+        sample_formats: Enum.reverse(sample_formats),
+        sample_rates: Enum.reverse(sample_rates)
       }
     end)
     |> Enum.reverse()
