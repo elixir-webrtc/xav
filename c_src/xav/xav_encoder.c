@@ -132,7 +132,10 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   if (encoder_config.codec->type == AVMEDIA_TYPE_AUDIO) {
     xav_encoder->frame->format = encoder_config.format;
     xav_encoder->frame->nb_samples = xav_encoder->encoder->c->frame_size;
-    xav_encoder->frame->channel_layout = xav_encoder->encoder->c->channel_layout;
+    if (xav_set_frame_channel_layout(xav_encoder->frame, &encoder_config.channel_layout) < 0) {
+      ret = xav_nif_raise(env, "failed_to_set_channel_layout");
+      goto clean;
+    }
     if (av_frame_get_buffer(xav_encoder->frame, 0) < 0) {
       ret = xav_nif_raise(env, "failed_to_get_buffer");
       goto clean;
@@ -194,7 +197,8 @@ ERL_NIF_TERM encode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     }
   } else {
     frame->pts = pts;
-    ret = av_samples_fill_arrays(frame->data, frame->linesize, input.data, frame->channels,
+    int nb_channels = xav_get_nb_channels(frame);
+    ret = av_samples_fill_arrays(frame->data, frame->linesize, input.data, nb_channels,
                                  frame->nb_samples, xav_encoder->encoder->c->sample_fmt, 1);
 
     if (ret < 0) {

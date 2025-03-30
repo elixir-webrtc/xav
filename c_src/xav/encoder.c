@@ -39,7 +39,8 @@ int encoder_init(struct Encoder *encoder, struct EncoderConfig *config) {
   } else {
     encoder->c->sample_fmt = config->sample_format;
     encoder->c->sample_rate = config->sample_rate;
-    encoder->c->channel_layout = config->channel_layout.layout;
+    encoder->c->ch_layout = config->channel_layout.layout;
+    xav_set_channel_layout(encoder->c, &config->channel_layout);
   }
 
   if (config->profile != FF_PROFILE_UNKNOWN) {
