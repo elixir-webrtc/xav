@@ -79,7 +79,7 @@ defmodule Xav.Encoder do
     ],
     sample_rate: [
       type: :pos_integer,
-      default: 44100,
+      default: 44_100,
       doc: """
       Number of samples per second.
 

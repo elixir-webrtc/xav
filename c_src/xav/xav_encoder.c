@@ -6,7 +6,6 @@ static ERL_NIF_TERM packets_to_term(ErlNifEnv *, struct Encoder *);
 static int get_profile(enum AVCodecID, const char *);
 static ERL_NIF_TERM codec_get_profiles(ErlNifEnv *, const AVCodec *);
 static ERL_NIF_TERM codec_get_sample_formats(ErlNifEnv *, const AVCodec *);
-static ERL_NIF_TERM codec_get_sample_formats(ErlNifEnv *, const AVCodec *);
 static ERL_NIF_TERM codec_get_sample_rates(ErlNifEnv *, const AVCodec *);
 static ERL_NIF_TERM codec_get_channel_layouts(ErlNifEnv *, const AVCodec *);
 
