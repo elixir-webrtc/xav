@@ -111,5 +111,33 @@ defmodule Xav.EncoderTest do
       assert length(packets) == 20
       assert Enum.all?(packets, &(&1.dts == &1.pts)), "dts should be equal to pts"
     end
+
+    test "encode audio samples" do
+      audio_file = "test/fixtures/encoder/audio/input-s16le.raw"
+      ref_file = "test/fixtures/encoder/audio/reference.al"
+
+      encoder =
+        Xav.Encoder.new(:pcm_alaw,
+          format: :s16,
+          channel_layout: "mono",
+          sample_rate: 8000
+        )
+
+      encoded_data =
+        File.stream!(audio_file, 20)
+        |> Stream.map(&%Xav.Frame{type: :audio, data: &1, format: :s16, pts: 0})
+        |> Stream.transform(
+          fn -> encoder end,
+          fn frame, encoder ->
+            {Xav.Encoder.encode(encoder, frame), encoder}
+          end,
+          fn encoder -> {Xav.Encoder.flush(encoder), encoder} end,
+          fn _encoder -> :ok end
+        )
+        |> Stream.map(& &1.data)
+        |> Enum.join()
+
+      assert File.read!(ref_file) == encoded_data
+    end
   end
 end

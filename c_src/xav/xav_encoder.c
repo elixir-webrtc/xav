@@ -1,4 +1,5 @@
 #include "xav_encoder.h"
+#include "channel_layout.h"
 
 ErlNifResourceType *xav_encoder_resource_type;
 
@@ -132,10 +133,16 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   if (encoder_config.codec->type == AVMEDIA_TYPE_AUDIO) {
     xav_encoder->frame->format = encoder_config.format;
     xav_encoder->frame->nb_samples = xav_encoder->encoder->c->frame_size;
+    // For encoder that accepts dynamic frame size, we set it to 1024.
+    if (xav_encoder->frame->nb_samples == 0) {
+      xav_encoder->frame->nb_samples = 1024;
+    }
+
     if (xav_set_frame_channel_layout(xav_encoder->frame, &encoder_config.channel_layout) < 0) {
       ret = xav_nif_raise(env, "failed_to_set_channel_layout");
       goto clean;
     }
+
     if (av_frame_get_buffer(xav_encoder->frame, 0) < 0) {
       ret = xav_nif_raise(env, "failed_to_get_buffer");
       goto clean;
@@ -197,6 +204,8 @@ ERL_NIF_TERM encode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     }
   } else {
     frame->pts = pts;
+    frame->nb_samples = input.size / av_get_bytes_per_sample(xav_encoder->encoder->c->sample_fmt);
+    
     int nb_channels = xav_get_nb_channels(frame);
     ret = av_samples_fill_arrays(frame->data, frame->linesize, input.data, nb_channels,
                                  frame->nb_samples, xav_encoder->encoder->c->sample_fmt, 1);
