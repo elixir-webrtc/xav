@@ -16,7 +16,7 @@ struct Decoder {
 
 struct Decoder *decoder_alloc();
 
-int decoder_init(struct Decoder *decoder, const AVCodec *codec);
+int decoder_init(struct Decoder *decoder, const AVCodec *codec, int channels);
 
 int decoder_decode(struct Decoder *decoder, AVPacket *pkt, AVFrame *frame);
 

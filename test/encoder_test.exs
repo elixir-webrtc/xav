@@ -124,15 +124,18 @@ defmodule Xav.EncoderTest do
         )
 
       encoded_data =
-        File.stream!(audio_file, 20)
-        |> Stream.map(&%Xav.Frame{type: :audio, data: &1, format: :s16, pts: 0})
+        File.read!(audio_file)
+        |> :binary.bin_to_list()
+        |> Enum.chunk_every(20)
+        |> Stream.map(
+          &%Xav.Frame{type: :audio, data: :binary.list_to_bin(&1), format: :s16, pts: 0}
+        )
         |> Stream.transform(
           fn -> encoder end,
           fn frame, encoder ->
             {Xav.Encoder.encode(encoder, frame), encoder}
           end,
-          fn encoder -> {Xav.Encoder.flush(encoder), encoder} end,
-          fn _encoder -> :ok end
+          fn encoder -> {Xav.Encoder.flush(encoder), encoder} end
         )
         |> Stream.map(& &1.data)
         |> Enum.join()

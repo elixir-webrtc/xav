@@ -13,6 +13,14 @@ defmodule Xav.Decoder do
   @type t() :: reference()
 
   @decoder_options_schema [
+    channels: [
+      type: :pos_integer,
+      doc: """
+      The number of channels of the encoded audio.
+
+      Some decoders require this field to be set by the user. (e.g. `G711`)
+      """
+    ],
     out_format: [
       type: :atom,
       doc: """
@@ -80,6 +88,7 @@ defmodule Xav.Decoder do
 
     Xav.Decoder.NIF.new(
       codec,
+      opts[:channels] || -1,
       opts[:out_format],
       opts[:out_sample_rate] || 0,
       opts[:out_channels] || 0,

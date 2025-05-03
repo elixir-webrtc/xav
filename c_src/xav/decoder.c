@@ -13,13 +13,17 @@ struct Decoder *decoder_alloc() {
   return decoder;
 }
 
-int decoder_init(struct Decoder *decoder, const AVCodec *codec) {
+int decoder_init(struct Decoder *decoder, const AVCodec *codec, int channels) {
   decoder->media_type = codec->type;
   decoder->codec = codec;
 
   decoder->c = avcodec_alloc_context3(decoder->codec);
   if (!decoder->c) {
     return -1;
+  }
+
+  if (codec->type == AVMEDIA_TYPE_AUDIO && channels != -1) {
+    decoder->c->channels = channels;
   }
 
   decoder->frame = av_frame_alloc();
@@ -32,11 +36,7 @@ int decoder_init(struct Decoder *decoder, const AVCodec *codec) {
     return -1;
   }
 
-  if (avcodec_open2(decoder->c, decoder->codec, NULL) < 0) {
-    return -1;
-  }
-
-  return 0;
+  return avcodec_open2(decoder->c, decoder->codec, NULL);
 }
 
 int decoder_decode(struct Decoder *decoder, AVPacket *pkt, AVFrame *frame) {
