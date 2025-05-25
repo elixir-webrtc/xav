@@ -347,21 +347,13 @@ static int init_audio_converter(struct XavDecoder *xav_decoder) {
   }
 
   struct ChannelLayout in_chlayout, out_chlayout;
-#if LIBAVUTIL_VERSION_MAJOR >= 58
-  in_chlayout.layout = xav_decoder->decoder->c->ch_layout;
+  xav_get_channel_layout_from_context(&in_chlayout, xav_decoder->decoder->c);
+
   if (xav_decoder->out_channels == 0) {
-    out_chlayout.layout = in_chlayout.layout;
+    xav_get_channel_layout_from_context(&out_chlayout, xav_decoder->decoder->c);
   } else {
-    av_channel_layout_default(&out_chlayout.layout, xav_decoder->out_channels);
+    xav_set_default_channel_layout(&out_chlayout, xav_decoder->out_channels);
   }
-#else
-  in_chlayout.layout = xav_decoder->decoder->c->channel_layout;
-  if (xav_decoder->out_channels == 0) {
-    out_chlayout.layout = in_chlayout.layout;
-  } else {
-    out_chlayout.layout = av_get_default_channel_layout(xav_decoder->out_channels);
-  }
-#endif
 
   return audio_converter_init(xav_decoder->ac, in_chlayout, xav_decoder->decoder->c->sample_rate,
                               xav_decoder->decoder->c->sample_fmt, out_chlayout, out_sample_rate,

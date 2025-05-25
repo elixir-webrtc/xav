@@ -14,7 +14,7 @@ XAV_VIDEO_CONVERTER_SO = $(PRIV_DIR)/libxavvideoconverter.so
 # XAV_DEBUG_LOGS = -DXAV_DEBUG=1
 
 DECODER_HEADERS = $(XAV_DIR)/xav_decoder.h $(XAV_DIR)/decoder.h $(XAV_DIR)/video_converter.h $(XAV_DIR)/audio_converter.h $(XAV_DIR)/utils.h $(XAV_DIR)/channel_layout.h
-DECODER_SOURCES = $(XAV_DIR)/xav_decoder.c $(XAV_DIR)/decoder.c $(XAV_DIR)/video_converter.c $(XAV_DIR)/audio_converter.c $(XAV_DIR)/utils.c
+DECODER_SOURCES = $(XAV_DIR)/xav_decoder.c $(XAV_DIR)/decoder.c $(XAV_DIR)/video_converter.c $(XAV_DIR)/audio_converter.c $(XAV_DIR)/utils.c $(XAV_DIR)/channel_layout.c
 
 ENCODER_HEADERS = $(XAV_DIR)/xav_encoder.h $(XAV_DIR)/encoder.h $(XAV_DIR)/utils.h $(XAV_DIR)/channel_layout.h
 ENCODER_SOURCES = $(XAV_DIR)/xav_encoder.c $(XAV_DIR)/encoder.c $(XAV_DIR)/utils.c $(XAV_DIR)/channel_layout.c

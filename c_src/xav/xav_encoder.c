@@ -205,7 +205,7 @@ ERL_NIF_TERM encode(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   } else {
     frame->pts = pts;
     frame->nb_samples = input.size / av_get_bytes_per_sample(xav_encoder->encoder->c->sample_fmt);
-    
+
     int nb_channels = xav_get_nb_channels(frame);
     ret = av_samples_fill_arrays(frame->data, frame->linesize, input.data, nb_channels,
                                  frame->nb_samples, xav_encoder->encoder->c->sample_fmt, 1);

@@ -23,7 +23,9 @@ int decoder_init(struct Decoder *decoder, const AVCodec *codec, int channels) {
   }
 
   if (codec->type == AVMEDIA_TYPE_AUDIO && channels != -1) {
-    decoder->c->channels = channels;
+    struct ChannelLayout ch_layout;
+    xav_set_default_channel_layout(&ch_layout, channels);
+    xav_set_channel_layout(decoder->c, &ch_layout);
   }
 
   decoder->frame = av_frame_alloc();

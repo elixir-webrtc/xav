@@ -2,6 +2,7 @@
 #include <libswresample/swresample.h>
 
 #include "audio_converter.h"
+#include "channel_layout.h"
 #include "utils.h"
 
 #define MAX_FLUSH_BUFFER 16
