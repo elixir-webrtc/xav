@@ -1,3 +1,4 @@
+#include "channel_layout.h"
 #include "utils.h"
 #include <libavcodec/avcodec.h>
 
@@ -15,10 +16,13 @@ struct EncoderConfig {
   int width;
   int height;
   enum AVPixelFormat format;
+  enum AVSampleFormat sample_format;
   AVRational time_base;
   int gop_size;
   int max_b_frames;
   int profile;
+  int sample_rate;
+  struct ChannelLayout channel_layout;
 };
 
 struct Encoder *encoder_alloc();

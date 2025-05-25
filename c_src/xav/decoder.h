@@ -2,6 +2,7 @@
 #include <libswresample/swresample.h>
 
 #include "audio_converter.h"
+#include "channel_layout.h"
 #include "utils.h"
 
 #define MAX_FLUSH_BUFFER 16
@@ -16,7 +17,7 @@ struct Decoder {
 
 struct Decoder *decoder_alloc();
 
-int decoder_init(struct Decoder *decoder, const AVCodec *codec);
+int decoder_init(struct Decoder *decoder, const AVCodec *codec, int channels);
 
 int decoder_decode(struct Decoder *decoder, AVPacket *pkt, AVFrame *frame);
 

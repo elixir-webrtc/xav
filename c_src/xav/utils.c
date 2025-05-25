@@ -93,3 +93,11 @@ ERL_NIF_TERM xav_nif_packet_to_term(ErlNifEnv *env, AVPacket *packet) {
       enif_make_atom(env, packet->flags & AV_PKT_FLAG_KEY ? "true" : "false");
   return enif_make_tuple(env, 4, data_term, dts, pts, is_keyframe);
 }
+
+int xav_get_nb_channels(const AVFrame *frame) {
+#if LIBAVUTIL_VERSION_MAJOR >= 58
+  return frame->ch_layout.nb_channels;
+#else
+  return frame->channels;
+#endif
+}

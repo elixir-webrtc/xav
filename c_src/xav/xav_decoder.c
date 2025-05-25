@@ -13,13 +13,14 @@ void free_frames(AVFrame **frames, int size) {
 }
 
 ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  if (argc != 6) {
+  if (argc != 7) {
     return xav_nif_raise(env, "invalid_arg_count");
   }
 
   ERL_NIF_TERM ret;
   char *codec_name = NULL;
   char *out_format = NULL;
+  int channels;
 
   // resolve codec
   if (!xav_nif_get_atom(env, argv[0], &codec_name)) {
@@ -37,8 +38,13 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     goto clean;
   }
 
+  if (!enif_get_int(env, argv[1], &channels)) {
+    ret = xav_nif_raise(env, "failed_to_get_int");
+    goto clean;
+  }
+
   // resolve output format
-  if (!xav_nif_get_atom(env, argv[1], &out_format)) {
+  if (!xav_nif_get_atom(env, argv[2], &out_format)) {
     ret = xav_nif_raise(env, "failed_to_get_atom");
     goto clean;
   }
@@ -61,25 +67,25 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
   // resolve other params
   int out_sample_rate;
-  if (!enif_get_int(env, argv[2], &out_sample_rate)) {
+  if (!enif_get_int(env, argv[3], &out_sample_rate)) {
     ret = xav_nif_raise(env, "invalid_out_sample_rate");
     goto clean;
   }
 
   int out_channels;
-  if (!enif_get_int(env, argv[3], &out_channels)) {
+  if (!enif_get_int(env, argv[4], &out_channels)) {
     ret = xav_nif_raise(env, "invalid_out_channels");
     goto clean;
   }
 
   int out_width;
-  if (!enif_get_int(env, argv[4], &out_width)) {
+  if (!enif_get_int(env, argv[5], &out_width)) {
     ret = xav_nif_raise(env, "failed_to_get_int");
     goto clean;
   }
 
   int out_height;
-  if (!enif_get_int(env, argv[5], &out_height)) {
+  if (!enif_get_int(env, argv[6], &out_height)) {
     ret = xav_nif_raise(env, "failed_to_get_int");
     goto clean;
   }
@@ -102,7 +108,7 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     goto clean;
   }
 
-  if (decoder_init(xav_decoder->decoder, codec) != 0) {
+  if (decoder_init(xav_decoder->decoder, codec, channels)) {
     ret = xav_nif_raise(env, "failed_to_init_decoder");
     goto clean;
   }
@@ -341,21 +347,13 @@ static int init_audio_converter(struct XavDecoder *xav_decoder) {
   }
 
   struct ChannelLayout in_chlayout, out_chlayout;
-#if LIBAVUTIL_VERSION_MAJOR >= 58
-  in_chlayout.layout = xav_decoder->decoder->c->ch_layout;
+  xav_get_channel_layout_from_context(&in_chlayout, xav_decoder->decoder->c);
+
   if (xav_decoder->out_channels == 0) {
-    out_chlayout.layout = in_chlayout.layout;
+    xav_get_channel_layout_from_context(&out_chlayout, xav_decoder->decoder->c);
   } else {
-    av_channel_layout_default(&out_chlayout.layout, xav_decoder->out_channels);
+    xav_set_default_channel_layout(&out_chlayout, xav_decoder->out_channels);
   }
-#else
-  in_chlayout.layout = xav_decoder->decoder->c->channel_layout;
-  if (xav_decoder->out_channels == 0) {
-    out_chlayout.layout = in_chlayout.layout;
-  } else {
-    out_chlayout.layout = av_get_default_channel_layout(xav_decoder->out_channels);
-  }
-#endif
 
   return audio_converter_init(xav_decoder->ac, in_chlayout, xav_decoder->decoder->c->sample_rate,
                               xav_decoder->decoder->c->sample_fmt, out_chlayout, out_sample_rate,
@@ -393,7 +391,7 @@ void free_xav_decoder(ErlNifEnv *env, void *obj) {
   }
 }
 
-static ErlNifFunc xav_funcs[] = {{"new", 6, new},
+static ErlNifFunc xav_funcs[] = {{"new", 7, new},
                                  {"decode", 4, decode, ERL_NIF_DIRTY_JOB_CPU_BOUND},
                                  {"flush", 1, flush, ERL_NIF_DIRTY_JOB_CPU_BOUND},
                                  {"pixel_formats", 0, pixel_formats},

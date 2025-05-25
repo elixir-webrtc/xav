@@ -26,3 +26,4 @@ ERL_NIF_TERM xav_nif_video_frame_to_term(ErlNifEnv *env, AVFrame *frame);
 ERL_NIF_TERM xav_nif_audio_frame_to_term(ErlNifEnv *env, uint8_t **out_data, int out_samples,
                                          int out_size, enum AVSampleFormat out_format, int pts);
 ERL_NIF_TERM xav_nif_packet_to_term(ErlNifEnv *env, AVPacket *packet);
+int xav_get_nb_channels(const AVFrame *frame);
