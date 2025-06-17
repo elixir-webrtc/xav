@@ -17,7 +17,7 @@ Make sure you have installed FFMpeg (ver. 4.x - 7.x) development packages on you
 ```elixir
 def deps do
   [
-    {:xav, "~> 0.10.0"},
+    {:xav, "~> 0.11.0"},
     # Add Nx if you want to have Xav.Frame.to_nx/1
     {:nx, ">= 0.0.0"}
   ]
