@@ -1,6 +1,7 @@
 defmodule Xav.Encoder.NIF do
   @moduledoc false
 
+  @compile {:autoload, false}
   @on_load :__on_load__
 
   def __on_load__ do
