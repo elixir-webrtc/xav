@@ -25,7 +25,7 @@ READER_SOURCES = $(XAV_DIR)/xav_reader.c $(XAV_DIR)/reader.c $(XAV_DIR)/video_co
 VIDEO_CONVERTER_HEADERS = $(XAV_DIR)/xav_video_converter.h $(XAV_DIR)/video_converter.h $(XAV_DIR)/utils.h
 VIDEO_CONVERTER_SOURCES = $(XAV_DIR)/xav_video_converter.c $(XAV_DIR)/video_converter.c $(XAV_DIR)/utils.c
 
-CFLAGS = $(XAV_DEBUG_LOGS) -fPIC -shared
+CFLAGS += $(XAV_DEBUG_LOGS) -fPIC -shared
 IFLAGS = -I$(ERTS_INCLUDE_DIR) -I$(XAV_DIR)
 LDFLAGS = -lavcodec -lswscale -lavutil -lavformat -lavdevice -lswresample
 
