@@ -1,8 +1,6 @@
 defmodule Xav.Encoder do
   @moduledoc """
   Audio/Video encoder.
-
-  Currently, it only supports video encoding.
   """
 
   @type t :: reference()
@@ -110,7 +108,9 @@ defmodule Xav.Encoder do
 
   To get the list of available encoders, see `Xav.list_encoders/0`.
 
-  It accepts the following options:\n#{NimbleOptions.docs(@video_encoder_schema)}
+  It accepts the following options for video encoding:\n#{NimbleOptions.docs(@video_encoder_schema)}
+
+  It accepts the following options for audio encoding:\n#{NimbleOptions.docs(@audio_encoder_schema)}
   """
   @spec new(codec(), Keyword.t()) :: t()
   def new(codec, opts) do
