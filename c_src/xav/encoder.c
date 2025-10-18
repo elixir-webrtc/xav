@@ -42,7 +42,7 @@ int encoder_init(struct Encoder *encoder, struct EncoderConfig *config) {
     xav_set_channel_layout(encoder->c, &config->channel_layout);
   }
 
-  if (config->profile != FF_PROFILE_UNKNOWN) {
+  if (config->profile != AV_PROFILE_UNKNOWN) {
     encoder->c->profile = config->profile;
   }
 
