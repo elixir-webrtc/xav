@@ -77,7 +77,6 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
       goto clean;
     }
 
-    XAV_FREE(config_name);
     enif_map_iterator_next(env, &iter);
   }
 
