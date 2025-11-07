@@ -153,15 +153,15 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   enif_release_resource(xav_encoder);
 
 clean:
-  if (!codec_name)
+  if (codec_name)
     XAV_FREE(codec_name);
-  if (!format)
+  if (format)
     XAV_FREE(format);
-  if (!config_name)
+  if (config_name)
     XAV_FREE(config_name);
-  if (!profile)
+  if (profile)
     XAV_FREE(profile);
-  if (!channel_layout)
+  if (channel_layout)
     XAV_FREE(channel_layout);
   enif_map_iterator_destroy(env, &iter);
 
