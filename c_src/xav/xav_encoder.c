@@ -18,7 +18,7 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   ERL_NIF_TERM ret;
   struct EncoderConfig encoder_config = {0};
   encoder_config.max_b_frames = -1;
-  encoder_config.profile = FF_PROFILE_UNKNOWN;
+  encoder_config.profile = AV_PROFILE_UNKNOWN;
 
   char *codec_name = NULL, *format = NULL, *profile = NULL;
   char *channel_layout = NULL;
@@ -112,7 +112,7 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 
   if (profile) {
     encoder_config.profile = get_profile(encoder_config.codec->id, profile);
-    if (encoder_config.profile == FF_PROFILE_UNKNOWN) {
+    if (encoder_config.profile == AV_PROFILE_UNKNOWN) {
       ret = xav_nif_raise(env, "invalid_profile");
       goto clean;
     }
@@ -302,10 +302,10 @@ static int get_profile(enum AVCodecID codec, const char *profile_name) {
   const AVProfile *profile = desc->profiles;
 
   if (profile == NULL) {
-    return FF_PROFILE_UNKNOWN;
+    return AV_PROFILE_UNKNOWN;
   }
 
-  while (profile->profile != FF_PROFILE_UNKNOWN) {
+  while (profile->profile != AV_PROFILE_UNKNOWN) {
     if (strcmp(profile->name, profile_name) == 0) {
       break;
     }
@@ -326,7 +326,7 @@ static ERL_NIF_TERM codec_get_profiles(ErlNifEnv *env, const AVCodec *codec) {
     return result;
   }
 
-  while (profile->profile != FF_PROFILE_UNKNOWN) {
+  while (profile->profile != AV_PROFILE_UNKNOWN) {
     ERL_NIF_TERM profile_name = enif_make_string(env, profile->name, ERL_NIF_LATIN1);
     result = enif_make_list_cell(env, profile_name, result);
 
