@@ -66,8 +66,14 @@ defmodule Xav.Reader do
   Creates a new audio/video reader.
 
   Both reading from a file and from a video camera are supported.
+
+  Linux:
   In case of using a video camera, the v4l2 driver is required, and FPS are
   locked to 10.
+
+  macOS:
+  In case of using a video camera, the avfoundation driver is required, and FPS are
+  locked to 10. The name of the device can be found with `ffmpeg -f avfoundation -list_devices true -i ""`
 
   Microphone input is not supported.
 

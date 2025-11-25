@@ -34,13 +34,18 @@ int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, in
 
   if (device_flag == 1) {
     avdevice_register_all();
-    reader->input_format = av_find_input_format("v4l2");
+    #ifdef XAV_PLATFORM_MACOS
+      reader->input_format = av_find_input_format("avfoundation");
+    #else
+      reader->input_format = av_find_input_format("v4l2");
+    #endif
+
     av_dict_set(&reader->options, "framerate", "10", 0);
   }
 
   XAV_LOG_DEBUG("Trying to open %s", reader->path);
 
-  if (avformat_open_input(&reader->fmt_ctx, reader->path, reader->input_format, NULL) < 0) {
+  if (avformat_open_input(&reader->fmt_ctx, reader->path, reader->input_format, &reader->options) < 0) {
     return -1;
   }
 
