@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "libavutil/rational.h"
 #include "utils.h"
 
 struct Reader {
@@ -29,7 +30,7 @@ struct Reader {
 struct Reader *reader_alloc();
 
 int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, int device_flag,
-                enum AVMediaType media_type);
+                enum AVMediaType media_type, AVRational framerate, unsigned int width, unsigned int height);
 
 int reader_next_frame(struct Reader *reader);
 

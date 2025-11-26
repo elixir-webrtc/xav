@@ -30,7 +30,15 @@ defmodule Xav.Reader do
     out_channels: [
       type: :pos_integer,
       doc: "The output number of channels of the audio samples"
-    ]
+    ],
+    framerate: [
+      type: {:tuple, [:non_neg_integer, :non_neg_integer]},
+      default: {0,0},
+      doc:
+        "the framerate a a 2-element tuple with the first element beign the nominator and the second element the denominator. Will only be used when reading from a device."
+    ],
+    width: [type: :non_neg_integer, default: 0, doc: "the width of the device resolution. Only used when reading from a device."],
+    height: [type: :non_neg_integer,default: 0,  doc: "the height of the device resolution. Only used when reading from a device."]
   ]
 
   @type t() :: %__MODULE__{
@@ -68,12 +76,14 @@ defmodule Xav.Reader do
   Both reading from a file and from a video camera are supported.
 
   Linux:
-  In case of using a video camera, the v4l2 driver is required, and FPS are
-  locked to 10.
+  In case of using a video camera, the v4l2 driver is required.
 
   macOS:
-  In case of using a video camera, the avfoundation driver is required, and FPS are
-  locked to 10. The name of the device can be found with `ffmpeg -f avfoundation -list_devices true -i ""`
+  In case of using a video camera, the avfoundation driver is required.
+  The name of the device can be found with `ffmpeg -f avfoundation -list_devices true -i ""`
+
+  Windows:
+  In case of using a video camera, the dshow driver is required.
 
   Microphone input is not supported.
 
@@ -148,6 +158,9 @@ defmodule Xav.Reader do
   defp do_create_reader(path, opts) do
     out_sample_rate = opts[:out_sample_rate] || 0
     out_channels = opts[:out_channels] || 0
+    framerate = opts[:framerate]
+    width = opts[:width]
+    height = opts[:height]
 
     case Xav.Reader.NIF.new(
            path,
@@ -155,7 +168,10 @@ defmodule Xav.Reader do
            to_int(opts[:read]),
            opts[:out_format],
            out_sample_rate,
-           out_channels
+           out_channels,
+           framerate,
+           width,
+           height
          ) do
       {:ok, reader, in_format, out_format, in_sample_rate, out_sample_rate, in_channels,
        out_channels, bit_rate, duration, codec} ->

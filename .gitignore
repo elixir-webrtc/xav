@@ -31,3 +31,4 @@ ffmpeg_build/
 _dialyzer/
 .cache/
 compile_commands.json
+priv/

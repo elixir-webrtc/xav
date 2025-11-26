@@ -6,7 +6,7 @@ static int init_video_converter(struct XavReader *xav_reader, AVFrame *frame);
 ErlNifResourceType *xav_reader_resource_type;
 
 ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  if (argc != 6) {
+  if (argc != 9) {
     return xav_nif_raise(env, "invalid_arg_count");
   }
 
@@ -53,6 +53,32 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "invalid_out_channels");
   }
 
+  const ERL_NIF_TERM *framerate_elements;
+  int framerate_elements_arity;
+  AVRational framerate;
+  if (!enif_get_tuple(env, argv[6], &framerate_elements_arity, &framerate_elements)) {
+    return xav_nif_raise(env, "invalid_framerate_tuple");
+  }
+  if (framerate_elements_arity != 2) {
+        return xav_nif_raise(env, "invalid_framerate_tuple_size");
+  }
+  if (!enif_get_int(env, framerate_elements[0], &framerate.num)){
+        return xav_nif_raise(env, "invalid_framerate_num");
+  }
+  if (!enif_get_int(env, framerate_elements[1], &framerate.den)){
+        return xav_nif_raise(env, "invalid_framerate_den");
+  }
+  
+  int width;
+  if (!enif_get_int(env, argv[7], &width) || width < 0) {
+    return xav_nif_raise(env, "invalid_width");
+  }
+
+  int height;
+  if (!enif_get_int(env, argv[8], &height) || height < 0) {
+    return xav_nif_raise(env, "invalid_height");
+  }
+
   struct XavReader *xav_reader =
       enif_alloc_resource(xav_reader_resource_type, sizeof(struct XavReader));
   xav_reader->reader = NULL;
@@ -67,7 +93,7 @@ ERL_NIF_TERM new (ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
     return xav_nif_raise(env, "couldnt_allocate_reader");
   }
 
-  int ret = reader_init(xav_reader->reader, bin.data, bin.size, device_flag, media_type);
+  int ret = reader_init(xav_reader->reader, bin.data, bin.size, device_flag, media_type, framerate, width, height);
 
   if (ret == -1) {
     return xav_nif_error(env, "couldnt_open_avformat_input");
@@ -301,7 +327,7 @@ void free_xav_reader(ErlNifEnv *env, void *obj) {
   }
 }
 
-static ErlNifFunc xav_funcs[] = {{"new", 6, new},
+static ErlNifFunc xav_funcs[] = {{"new", 9, new},
                                  {"next_frame", 1, next_frame, ERL_NIF_DIRTY_JOB_CPU_BOUND},
                                  {"seek", 2, seek, ERL_NIF_DIRTY_JOB_CPU_BOUND}};
 

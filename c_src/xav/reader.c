@@ -1,4 +1,5 @@
 #include "reader.h"
+#include "libavutil/rational.h"
 #include "utils.h"
 #include <libavutil/samplefmt.h>
 #include <libavutil/version.h>
@@ -24,7 +25,7 @@ struct Reader *reader_alloc() {
 }
 
 int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, int device_flag,
-                enum AVMediaType media_type) {
+                enum AVMediaType media_type, AVRational framerate, unsigned int width, unsigned int height) {
   int ret;
   reader->path = XAV_ALLOC(path_size + 1);
   memcpy(reader->path, path, path_size);
@@ -34,18 +35,39 @@ int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, in
 
   if (device_flag == 1) {
     avdevice_register_all();
-    #ifdef XAV_PLATFORM_MACOS
-      reader->input_format = av_find_input_format("avfoundation");
-    #else
-      reader->input_format = av_find_input_format("v4l2");
+
+    #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+        const char *driver = "dshow";
+    #elif __APPLE__
+        const char *driver = "avfoundation";
+    #elif __linux__
+        const char *driver = "v4l2";
     #endif
 
-    av_dict_set(&reader->options, "framerate", "10", 0);
+    reader->input_format = av_find_input_format(driver);
+
+    if (framerate.den != 0 && framerate.num != 0) {
+      char framerate_str[32];
+      snprintf(framerate_str, sizeof(framerate_str), "%d/%d", framerate.num,
+               framerate.den);
+      av_dict_set(&reader->options, "framerate", framerate_str, 0);
+    } else {
+      av_dict_set(&reader->options, "framerate", "10", 0);
+    }
+
+    if (width != 0 && height != 0) {
+      char resolution_str[32];
+      snprintf(resolution_str, sizeof(resolution_str), "%dx%d", width, height);
+      av_dict_set(&reader->options, "video_size", resolution_str, 0);
+    } else {
+      av_dict_set(&reader->options, "video_size", "640x480", 0);
+    }
   }
 
   XAV_LOG_DEBUG("Trying to open %s", reader->path);
 
-  if (avformat_open_input(&reader->fmt_ctx, reader->path, reader->input_format, &reader->options) < 0) {
+  if (avformat_open_input(&reader->fmt_ctx, reader->path, reader->input_format, &reader->options) <
+      0) {
     return -1;
   }
 
