@@ -6,6 +6,14 @@
 
 #include <inttypes.h>
 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+    const char *driver = "dshow";
+#elif __APPLE__
+    const char *driver = "avfoundation";
+#elif __linux__
+    const char *driver = "v4l2";
+#endif
+
 static int init_converter(struct Reader *reader);
 
 struct Reader *reader_alloc() {
@@ -35,14 +43,6 @@ int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, in
 
   if (device_flag == 1) {
     avdevice_register_all();
-
-    #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
-        const char *driver = "dshow";
-    #elif __APPLE__
-        const char *driver = "avfoundation";
-    #elif __linux__
-        const char *driver = "v4l2";
-    #endif
 
     reader->input_format = av_find_input_format(driver);
 
