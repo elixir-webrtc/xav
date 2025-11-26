@@ -31,7 +31,6 @@ LDFLAGS = -lavcodec -lswscale -lavutil -lavformat -lavdevice -lswresample
 
 # Flags for MacOS
 ifeq ($(shell uname -s),Darwin)
-	CFLAGS += -DXAV_PLATFORM_MACOS
 	ifeq ($(shell uname -m),arm64)
 		IFLAGS += $$(pkg-config --cflags-only-I libavcodec libswscale libavutil libavformat libavdevice libswresample)
 		LFLAGS += $$(pkg-config --libs-only-L libavcodec libswscale libavutil libavformat libavdevice libswresample)
