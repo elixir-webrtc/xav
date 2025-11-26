@@ -8,9 +8,9 @@
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
     const char *driver = "dshow";
-#elif __APPLE__
+#elif defined(__APPLE__)
     const char *driver = "avfoundation";
-#elif __linux__
+#elif defined(__linux__)
     const char *driver = "v4l2";
 #endif
 
