@@ -51,17 +51,13 @@ int reader_init(struct Reader *reader, unsigned char *path, size_t path_size, in
       snprintf(framerate_str, sizeof(framerate_str), "%d/%d", framerate.num,
                framerate.den);
       av_dict_set(&reader->options, "framerate", framerate_str, 0);
-    } else {
-      av_dict_set(&reader->options, "framerate", "10", 0);
-    }
+    } 
 
     if (width != 0 && height != 0) {
       char resolution_str[32];
       snprintf(resolution_str, sizeof(resolution_str), "%dx%d", width, height);
       av_dict_set(&reader->options, "video_size", resolution_str, 0);
-    } else {
-      av_dict_set(&reader->options, "video_size", "640x480", 0);
-    }
+    } 
   }
 
   XAV_LOG_DEBUG("Trying to open %s", reader->path);
