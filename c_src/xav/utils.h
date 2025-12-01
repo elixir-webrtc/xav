@@ -7,6 +7,11 @@
 #include <libswresample/swresample.h>
 #include <libswscale/swscale.h>
 
+// FFmpeg ≤ 7 used FF_PROFILE_UNKNOWN, FFmpeg ≥ 8 uses AV_PROFILE_UNKNOWN
+#ifndef AV_PROFILE_UNKNOWN
+#define AV_PROFILE_UNKNOWN FF_PROFILE_UNKNOWN
+#endif
+
 #ifdef XAV_DEBUG
 #define XAV_LOG_DEBUG(X, ...)                                                                      \
   fprintf(stderr, "[XAV DEBUG %s] %s:%d " X "\n", __TIME__, __FILE__, __LINE__, ##__VA_ARGS__)
