@@ -40,7 +40,8 @@ defmodule Xav.MixProject do
 
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger],
+      mod: {Xav.Application, []}
     ]
   end
 

@@ -15,4 +15,6 @@ defmodule Xav.Reader.NIF do
   def next_frame(_reader), do: :erlang.nif_error(:undef)
 
   def seek(_reader, _time_in_seconds), do: :erlang.nif_error(:undef)
+
+  def set_log_level(_level), do: :erlang.nif_error(:undef)
 end

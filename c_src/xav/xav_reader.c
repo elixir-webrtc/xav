@@ -327,9 +327,31 @@ void free_xav_reader(ErlNifEnv *env, void *obj) {
   }
 }
 
-static ErlNifFunc xav_funcs[] = {{"new", 9, new},
-                                 {"next_frame", 1, next_frame, ERL_NIF_DIRTY_JOB_CPU_BOUND},
-                                 {"seek", 2, seek, ERL_NIF_DIRTY_JOB_CPU_BOUND}};
+/* Wraps av_log_set_level(int). The level integer is validated on the
+ * Elixir side (Xav.Reader.set_log_level/1 maps atoms to the AV_LOG_*
+ * constants) so the NIF only needs to pass it through. Note that
+ * av_log_set_level() is process-global: it changes the log level for
+ * every libav* call made from the current OS process, not just the
+ * reader that triggered the call. */
+ERL_NIF_TERM set_log_level(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  if (argc != 1) {
+    return xav_nif_raise(env, "invalid_arg_count");
+  }
+
+  int level;
+  if (!enif_get_int(env, argv[0], &level)) {
+    return xav_nif_raise(env, "invalid_log_level");
+  }
+
+  av_log_set_level(level);
+  return enif_make_atom(env, "ok");
+}
+
+static ErlNifFunc xav_funcs[] = {
+    {"new", 9, new},
+    {"next_frame", 1, next_frame, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+    {"seek", 2, seek, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+    {"set_log_level", 1, set_log_level}};
 
 static int load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info) {
 

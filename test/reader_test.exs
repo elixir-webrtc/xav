@@ -71,6 +71,26 @@ defmodule Xav.ReaderTest do
     {:error, :eof} = Xav.Reader.next_frame(r)
   end
 
+  describe "set_log_level/1" do
+    test "accepts atoms" do
+      assert :ok = Xav.Reader.set_log_level(:error)
+      assert :ok = Xav.Reader.set_log_level(:quiet)
+      # restore default for other tests
+      assert :ok = Xav.Reader.set_log_level(:info)
+    end
+
+    test "accepts integers" do
+      assert :ok = Xav.Reader.set_log_level(16)
+      assert :ok = Xav.Reader.set_log_level(:info)
+    end
+
+    test "rejects unknown atoms" do
+      assert_raise ArgumentError, ~r/invalid FFmpeg log level/, fn ->
+        Xav.Reader.set_log_level(:nonsense)
+      end
+    end
+  end
+
   @formats [{"h264", "h264"}, {"h264", "mkv"}, {"vp8", "webm"}, {"vp9", "webm"}, {"av1", "mkv"}]
   Enum.map(@formats, fn {codec, container} ->
     name = "#{codec} #{container}"
