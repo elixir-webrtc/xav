@@ -17,6 +17,101 @@ defmodule Xav do
           media_type: atom()
         }
 
+  @typedoc """
+  A human-readable FFmpeg log level.
+
+  The mapping to FFmpeg's `AV_LOG_*` constants is:
+
+  | Atom        | FFmpeg constant   | Value |
+  |-------------|-------------------|-------|
+  | `:quiet`    | `AV_LOG_QUIET`    | -8    |
+  | `:panic`    | `AV_LOG_PANIC`    | 0     |
+  | `:fatal`    | `AV_LOG_FATAL`    | 8     |
+  | `:error`    | `AV_LOG_ERROR`    | 16    |
+  | `:warning`  | `AV_LOG_WARNING`  | 24    |
+  | `:info`     | `AV_LOG_INFO`     | 32    |
+  | `:verbose`  | `AV_LOG_VERBOSE`  | 40    |
+  | `:debug`    | `AV_LOG_DEBUG`    | 48    |
+  | `:trace`    | `AV_LOG_TRACE`    | 56    |
+
+  FFmpeg's default is `:info`.
+  """
+  @type log_level ::
+          :quiet
+          | :panic
+          | :fatal
+          | :error
+          | :warning
+          | :info
+          | :verbose
+          | :debug
+          | :trace
+
+  @log_levels %{
+    quiet: -8,
+    panic: 0,
+    fatal: 8,
+    error: 16,
+    warning: 24,
+    info: 32,
+    verbose: 40,
+    debug: 48,
+    trace: 56
+  }
+
+  @doc """
+  Sets the FFmpeg log level.
+
+  Accepts either one of the level atoms listed in `t:log_level/0`
+  or a raw integer level. Returns `:ok`.
+
+  This call wraps FFmpeg's `av_log_set_level/1`, which is
+  **process-global**: the level is shared across every `libav*` and
+  `libswscale` call in the current OS process, including readers,
+  decoders, encoders, and converters created from the Elixir VM.
+
+  Typical use is to silence the informational `[swscaler @ ...]` lines
+  that `libswscale` prints when it falls back to a non-SIMD
+  colorspace conversion path (which happens for example on
+  `yuv420p -> rgb24` on Apple Silicon):
+
+      Xav.set_log_level(:error)
+
+  To configure the level declaratively at application start, use the
+  `:ffmpeg_log_level` key in your application env instead:
+
+      # config/runtime.exs
+      config :xav, ffmpeg_log_level: :error
+
+  `Xav.Application` reads this on boot and calls `set_log_level/1`
+  for you.
+
+  ## Examples
+
+      iex> Xav.set_log_level(:error)
+      :ok
+
+      iex> Xav.set_log_level(:quiet)
+      :ok
+
+  """
+  @spec set_log_level(log_level() | integer()) :: :ok
+  def set_log_level(level) when is_atom(level) do
+    case Map.fetch(@log_levels, level) do
+      {:ok, int} ->
+        Xav.Reader.NIF.set_log_level(int)
+
+      :error ->
+        raise ArgumentError,
+              "invalid FFmpeg log level #{inspect(level)}. " <>
+                "Expected one of #{inspect(Map.keys(@log_levels))} or an integer."
+    end
+  end
+
+  def set_log_level(level) when is_integer(level) do
+    Xav.Reader.NIF.set_log_level(level)
+  end
+
   @doc """
   Get all available pixel formats.
 

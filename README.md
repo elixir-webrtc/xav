@@ -37,14 +37,14 @@ when `libswscale` falls back to a generic colorspace conversion path. These are 
 You can raise the threshold from Elixir:
 
 ```elixir
-Xav.Reader.set_log_level(:error)
+Xav.set_log_level(:error)
 ```
 
 Or set it once at application start by configuring your application env:
 
 ```elixir
 # config/runtime.exs
-config :xav, log_level: :error
+config :xav, ffmpeg_log_level: :error
 ```
 
 `Xav.Application` reads this on boot and applies it before your supervision tree starts. Valid atoms are `:quiet`, `:panic`, `:fatal`, `:error`, `:warning`, `:info`, `:verbose`, `:debug`, and `:trace`. An integer FFmpeg level is also accepted.
