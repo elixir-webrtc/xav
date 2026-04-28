@@ -24,6 +24,33 @@ def deps do
 end
 ```
 
+## Controlling FFmpeg log output
+
+FFmpeg's underlying libraries (`libavcodec`, `libswscale`, ...) print to `stderr` at the `AV_LOG_INFO` level by default. This is usually fine but can produce informational noise such as
+
+```
+[swscaler @ 0x1490a0000] No accelerated colorspace conversion found from yuv420p to rgb24.
+```
+
+when `libswscale` falls back to a generic colorspace conversion path. These are not errors — decoded frames are bit-exact — but they can clutter test output and logs.
+
+You can raise the threshold from Elixir:
+
+```elixir
+Xav.set_log_level(:error)
+```
+
+Or set it once at application start by configuring your application env:
+
+```elixir
+# config/runtime.exs
+config :xav, ffmpeg_log_level: :error
+```
+
+`Xav.Application` reads this on boot and applies it before your supervision tree starts. Valid atoms are `:quiet`, `:panic`, `:fatal`, `:error`, `:warning`, `:info`, `:verbose`, `:debug`, and `:trace`. An integer FFmpeg level is also accepted.
+
+Note that `av_log_set_level/1` is process-global — changing the level affects every `libav*` call made from the current OS process, not just the reader that triggered the change.
+
 ## Usage
 
 Decode
